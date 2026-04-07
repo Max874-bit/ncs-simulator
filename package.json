@@ -1,0 +1,14 @@
+{
+  "name": "ncs-simulator",
+  "version": "1.0.0",
+  "description": "NCS 직업기초능력 시험 시뮬레이터 - 일반행정 전형",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "express": "^4.21.0"
+  }
+}
