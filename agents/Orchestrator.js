@@ -104,8 +104,8 @@ class Orchestrator {
     const evaluation = this.evalAgent.evaluate(extracted);
 
     // ─── Step 3: DiagnosisAgent — AI 진단 & 보강 전략 ───
-    this._emit('info', '→ Step 3: DiagnosisAgent 실행');
-    const diagnosis = this.diagAgent.diagnose(evaluation, extracted);
+    this._emit('info', '→ Step 3: DiagnosisAgent 실행 (풀이 패턴 분석 포함)');
+    const diagnosis = this.diagAgent.diagnose(evaluation, extracted, examSession.questions);
 
     // ─── Step 4: QuestionFetchAgent — 보강 문제 수집 ───
     this._emit('info', '→ Step 4: QuestionFetchAgent (보강 문제 수집)');
@@ -185,6 +185,10 @@ class Orchestrator {
 
       // 보강 추천
       recommendations: diagnosis.recommendations,
+
+      // 풀이 패턴 분석 & 사고 전략 (신규)
+      patternAnalysis: diagnosis.patternAnalysis,
+      thinkingStrategies: diagnosis.thinkingStrategies,
 
       // 학습 계획
       studyPlan: diagnosis.studyPlan,

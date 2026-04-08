@@ -789,6 +789,75 @@
     .rec-item .ri-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
     .rec-item .ri-desc { font-size: 13px; color: var(--gray-500); }
 
+    /* ─── Result Page Tabs ─── */
+    .result-tab {
+      padding: 10px 18px;
+      border: 2px solid var(--gray-200);
+      border-radius: 24px;
+      background: var(--white);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-500);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .result-tab:hover { border-color: var(--primary); color: var(--primary); }
+    .result-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    .result-tab i { margin-right: 4px; }
+    .btn-outline {
+      padding: 10px 24px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      background: var(--white);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gray-700);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ─── Pattern Analysis Cards ─── */
+    .pattern-card {
+      padding: 16px 18px;
+      border-radius: 12px;
+      border-left: 4px solid var(--gray-300);
+      background: var(--gray-50);
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+    .pattern-card.severity-high { border-left-color: var(--danger); background: var(--danger-light); }
+    .pattern-card.severity-medium { border-left-color: var(--warning); background: var(--warning-light); }
+    .pattern-card .pattern-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .pattern-card .pattern-desc { font-size: 13px; color: var(--gray-700); margin-bottom: 8px; }
+    .pattern-card .pattern-insight { font-size: 13px; color: var(--gray-900); padding: 10px 12px; background: rgba(255,255,255,0.7); border-radius: 8px; line-height: 1.6; }
+
+    .strategy-card {
+      padding: 18px 20px;
+      border-radius: 12px;
+      border: 1px solid var(--gray-200);
+      background: var(--white);
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .strategy-card .strategy-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .strategy-card .strategy-area { font-weight: 800; font-size: 15px; }
+    .strategy-card .strategy-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+    .strategy-card .trap-label { font-weight: 700; font-size: 13px; color: var(--danger); margin-bottom: 4px; }
+    .strategy-card .trap-desc { font-size: 13px; color: var(--gray-700); margin-bottom: 12px; line-height: 1.5; }
+    .strategy-card .thinking-box { padding: 12px 14px; background: var(--primary-light); border-radius: 10px; margin-bottom: 10px; }
+    .strategy-card .thinking-box .think-label { font-weight: 700; font-size: 12px; color: var(--primary-dark); margin-bottom: 4px; }
+    .strategy-card .thinking-box .think-text { font-size: 13px; color: var(--gray-900); line-height: 1.6; }
+    .strategy-card .action-box { padding: 10px 14px; background: var(--success-light); border-radius: 10px; margin-bottom: 8px; }
+    .strategy-card .action-box .action-text { font-size: 13px; color: var(--gray-900); line-height: 1.5; }
+    .strategy-card .prediction-text { font-size: 12px; color: var(--gray-500); font-style: italic; padding-top: 4px; }
+
     /* ─── Answer Review ─── */
     .review-tabs {
       display: flex;
@@ -1032,6 +1101,10 @@
       .stat-card { padding: 16px 12px; }
       .answer-review .q-card { padding: 12px 10px; }
       .answer-review .choices li { padding: 10px; font-size: 13px; }
+      .result-tab { padding: 8px 12px; font-size: 12px; }
+      .pattern-card { padding: 12px 14px; }
+      .strategy-card { padding: 14px 16px; }
+      .strategy-card .thinking-box, .strategy-card .action-box { padding: 10px 12px; }
 
       /* ─── 일반 버튼 ─── */
       .btn { font-size: 14px; }
@@ -1296,52 +1369,104 @@
         <p>AI가 분석한 맞춤형 합격 진단</p>
       </div>
 
-      <div class="card" style="text-align:center; padding:40px" id="result-score-area"></div>
-
-      <div id="result-stats"></div>
-
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:20px"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> 영역별 분석</h3>
-        <div id="result-area-bars"></div>
+      <!-- ═══ 결과 페이지 탭 네비게이션 ═══ -->
+      <div class="result-page-tabs" style="display:flex;gap:6px;margin:16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px">
+        <button class="result-tab active" onclick="switchResultPage('overview',this)"><i class="fas fa-chart-pie"></i> 성적 요약</button>
+        <button class="result-tab" onclick="switchResultPage('pattern',this)"><i class="fas fa-search-plus"></i> 풀이 패턴</button>
+        <button class="result-tab" onclick="switchResultPage('diagnosis',this)"><i class="fas fa-stethoscope"></i> 상세 진단</button>
+        <button class="result-tab" onclick="switchResultPage('review',this)"><i class="fas fa-clipboard-check"></i> 오답 정리</button>
       </div>
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-file-medical-alt" style="color:var(--accent)"></i> 종합 진단</h3>
-        <div id="result-overall-diagnosis"></div>
+      <!-- ═══ 페이지 1: 성적 요약 ═══ -->
+      <div id="result-page-overview" class="result-page">
+        <div class="card" style="text-align:center; padding:40px" id="result-score-area"></div>
+        <div id="result-stats"></div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:20px"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> 영역별 분석</h3>
+          <div id="result-area-bars"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:16px"><i class="fas fa-file-medical-alt" style="color:var(--accent)"></i> 종합 진단</h3>
+          <div id="result-overall-diagnosis"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px">
+          <button class="btn btn-primary" onclick="switchResultPage('pattern',document.querySelectorAll('.result-tab')[1])"><i class="fas fa-arrow-right"></i> 풀이 패턴 분석 보기</button>
+        </div>
       </div>
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-stethoscope" style="color:var(--info)"></i> 영역별 상세 진단</h3>
-        <div id="result-area-diagnosis"></div>
+      <!-- ═══ 페이지 2: 풀이 패턴 분석 & 사고 전략 (신규) ═══ -->
+      <div id="result-page-pattern" class="result-page" style="display:none">
+
+        <div class="card" style="margin-top:0">
+          <h3 style="margin-bottom:8px"><i class="fas fa-search-plus" style="color:#e74c3c"></i> 풀이 패턴 분석</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">당신의 답안 선택 패턴을 분석하여 반복되는 실수 유형을 찾았습니다.</p>
+          <div id="result-pattern-analysis"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:8px"><i class="fas fa-lightbulb" style="color:var(--accent)"></i> 사고 전략 제안</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">향후 이 유형의 문항에서 정답률을 높일 수 있는 구체적인 사고 방법입니다.</p>
+          <div id="result-thinking-strategies"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center">
+          <button class="btn btn-outline" onclick="switchResultPage('overview',document.querySelectorAll('.result-tab')[0])"><i class="fas fa-arrow-left"></i> 성적 요약</button>
+          <button class="btn btn-primary" onclick="switchResultPage('diagnosis',document.querySelectorAll('.result-tab')[2])"><i class="fas fa-arrow-right"></i> 상세 진단</button>
+        </div>
       </div>
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:8px"><i class="fas fa-tasks" style="color:var(--accent)"></i> 추천 보강 문제</h3>
-        <p style="font-size:14px; color:var(--gray-500); margin-bottom:20px">약점 영역을 집중 보강할 수 있는 문제를 자동 선별했습니다.</p>
-        <div id="result-recommendations"></div>
+      <!-- ═══ 페이지 3: 상세 진단 ═══ -->
+      <div id="result-page-diagnosis" class="result-page" style="display:none">
+
+        <div class="card" style="margin-top:0">
+          <h3 style="margin-bottom:16px"><i class="fas fa-stethoscope" style="color:var(--info)"></i> 영역별 상세 진단</h3>
+          <div id="result-area-diagnosis"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:8px"><i class="fas fa-tasks" style="color:var(--accent)"></i> 추천 보강 문제</h3>
+          <p style="font-size:14px; color:var(--gray-500); margin-bottom:20px">약점 영역을 집중 보강할 수 있는 문제를 자동 선별했습니다.</p>
+          <div id="result-recommendations"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:16px"><i class="fas fa-calendar-alt" style="color:var(--success)"></i> 학습 계획</h3>
+          <div id="result-study-plan"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:16px"><i class="fas fa-th" style="color:var(--accent)"></i> NCS 역량 진단 매트릭스</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">영역 x 난이도 x 유형별 정답률 교차 분석</p>
+          <div id="result-matrix"></div>
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <h3 style="margin-bottom:16px"><i class="fas fa-project-diagram" style="color:var(--primary)"></i> 에이전트 파이프라인 로그</h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">4개 AI 에이전트가 분산 처리한 실행 기록입니다.</p>
+          <div id="result-pipeline"></div>
+        </div>
+
+        <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center">
+          <button class="btn btn-outline" onclick="switchResultPage('pattern',document.querySelectorAll('.result-tab')[1])"><i class="fas fa-arrow-left"></i> 풀이 패턴</button>
+          <button class="btn btn-primary" onclick="switchResultPage('review',document.querySelectorAll('.result-tab')[3])"><i class="fas fa-arrow-right"></i> 오답 정리</button>
+        </div>
       </div>
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-calendar-alt" style="color:var(--success)"></i> 학습 계획</h3>
-        <div id="result-study-plan"></div>
-      </div>
+      <!-- ═══ 페이지 4: 오답 정리 ═══ -->
+      <div id="result-page-review" class="result-page" style="display:none">
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-th" style="color:var(--accent)"></i> NCS 역량 진단 매트릭스</h3>
-        <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">영역 × 난이도 × 유형별 정답률 교차 분석</p>
-        <div id="result-matrix"></div>
-      </div>
+        <div class="card" style="margin-top:0">
+          <h3 style="margin-bottom:16px"><i class="fas fa-clipboard-check" style="color:var(--success)"></i> 문제별 정오 확인</h3>
+          <div class="review-tabs" id="review-tabs"></div>
+          <div id="result-review" class="answer-review"></div>
+        </div>
 
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-project-diagram" style="color:var(--primary)"></i> 에이전트 파이프라인 로그</h3>
-        <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">4개 AI 에이전트가 분산 처리한 실행 기록입니다.</p>
-        <div id="result-pipeline"></div>
-      </div>
-
-      <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-clipboard-check" style="color:var(--success)"></i> 문제별 정오 확인</h3>
-        <div class="review-tabs" id="review-tabs"></div>
-        <div id="result-review" class="answer-review"></div>
+        <div style="text-align:center;margin-top:24px">
+          <button class="btn btn-outline" onclick="switchResultPage('diagnosis',document.querySelectorAll('.result-tab')[2])"><i class="fas fa-arrow-left"></i> 상세 진단</button>
+        </div>
       </div>
 
       <div style="text-align:center; margin:40px 0; display:flex; gap:16px; justify-content:center; flex-wrap:wrap">
@@ -1716,6 +1841,61 @@ function renderResult(r) {
     document.getElementById('result-study-plan').innerHTML = spHtml;
   }
 
+  // ═══ 풀이 패턴 분석 렌더링 ═══
+  if (r.patternAnalysis) {
+    const pa = r.patternAnalysis;
+    let patternHtml = '';
+
+    if (pa.patterns.length === 0) {
+      patternHtml = '<div class="diag-box" style="border-color:var(--success)"><i class="fas fa-check-circle" style="color:var(--success);margin-right:6px"></i>뚜렷한 오답 패턴이 발견되지 않았습니다. 안정적인 풀이 습관을 유지하고 있습니다.</div>';
+    } else {
+      patternHtml += `<div class="diag-box" style="margin-bottom:14px"><i class="fas fa-exclamation-circle" style="color:var(--warning);margin-right:6px"></i>${pa.summary}</div>`;
+      patternHtml += pa.patterns.map(p => {
+        const severityIcon = p.severity === 'high' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+        const severityColor = p.severity === 'high' ? 'var(--danger)' : 'var(--warning)';
+        return `<div class="pattern-card severity-${p.severity}">
+          <div class="pattern-title"><i class="fas ${severityIcon}" style="color:${severityColor};margin-right:6px"></i>${p.title}</div>
+          <div class="pattern-desc">${p.description}</div>
+          <div class="pattern-insight"><i class="fas fa-lightbulb" style="color:var(--accent);margin-right:4px"></i>${p.insight}</div>
+        </div>`;
+      }).join('');
+    }
+
+    document.getElementById('result-pattern-analysis').innerHTML = patternHtml;
+  }
+
+  // ═══ 사고 전략 렌더링 ═══
+  if (r.thinkingStrategies && r.thinkingStrategies.length > 0) {
+    document.getElementById('result-thinking-strategies').innerHTML = r.thinkingStrategies.map(s => {
+      const gradeColor = s.grade === 'D' ? 'var(--danger)' : s.grade === 'C' ? 'var(--warning)' : 'var(--info)';
+      const headerInfo = s.currentRate !== null
+        ? `<span class="strategy-badge" style="background:${gradeColor}15;color:${gradeColor}">${s.grade}등급 ${s.currentRate}%</span>`
+        : '';
+
+      return `<div class="strategy-card">
+        <div class="strategy-header">
+          <span class="strategy-area">${s.area}</span>
+          ${headerInfo}
+        </div>
+        ${s.trapType !== 'timeManagement' && s.trapType !== 'noAnswer' ? `
+          <div class="trap-label"><i class="fas fa-crosshairs" style="margin-right:4px"></i>감지된 함정 유형: ${s.trapType}</div>
+          <div class="trap-desc">${s.trapDescription}</div>
+        ` : `<div class="trap-desc">${s.trapDescription}</div>`}
+        <div class="thinking-box">
+          <div class="think-label"><i class="fas fa-lightbulb" style="margin-right:4px"></i>사고 전략</div>
+          <div class="think-text">${s.thinkingStrategy}</div>
+        </div>
+        <div class="action-box">
+          <div class="action-text"><i class="fas fa-check" style="color:var(--success);margin-right:4px"></i>${s.actionItem}</div>
+        </div>
+        <div class="prediction-text"><i class="fas fa-chart-line" style="margin-right:4px"></i>${s.prediction}</div>
+      </div>`;
+    }).join('');
+  } else {
+    document.getElementById('result-thinking-strategies').innerHTML =
+      '<div class="diag-box" style="border-color:var(--success)"><i class="fas fa-check-circle" style="color:var(--success);margin-right:6px"></i>모든 영역에서 우수한 사고 전략을 보여주고 있습니다.</div>';
+  }
+
   // 에이전트 파이프라인 로그
   if (r.pipeline) {
     const agentIcons = {
@@ -1872,6 +2052,20 @@ async function loadCompetencyMatrix(examResult) {
     return `<span style="display:inline-block;min-width:44px;padding:3px 8px;border-radius:12px;background:${color}15;color:${color};font-weight:700;font-size:12px">${rate}%</span>`;
   }
 } // end loadCompetencyMatrix
+
+// ═══ 결과 페이지 탭 전환 ═══
+function switchResultPage(pageId, tabEl) {
+  // 모든 페이지 숨기기
+  document.querySelectorAll('.result-page').forEach(p => p.style.display = 'none');
+  // 타겟 페이지 표시
+  const target = document.getElementById('result-page-' + pageId);
+  if (target) target.style.display = 'block';
+  // 탭 활성 상태 변경
+  document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  // 페이지 상단으로 스크롤
+  window.scrollTo({ top: document.getElementById('screen-result').offsetTop, behavior: 'smooth' });
+}
 
 function filterReview(tab, el) {
   document.querySelectorAll('.rtab').forEach(t => t.classList.remove('active'));
