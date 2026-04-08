@@ -957,6 +957,123 @@
     .history-item { transition: box-shadow 0.2s; }
     .history-item:hover { box-shadow: var(--shadow-md); }
 
+    /* ═══════════════════════════════════════
+       BOOKMARK & WRONG NOTES
+       ═══════════════════════════════════════ */
+    .bookmark-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--gray-300);
+      transition: all 0.2s;
+      padding: 4px 8px;
+      line-height: 1;
+    }
+    .bookmark-btn:hover { color: var(--accent); transform: scale(1.15); }
+    .bookmark-btn.active { color: var(--accent); }
+
+    .q-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .q-card-header .q-meta { flex: 1; }
+
+    .wrong-note-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid var(--accent);
+      background: var(--accent-light);
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .wrong-note-btn:hover { background: var(--accent); color: white; }
+    .wrong-note-btn.added {
+      border-color: var(--gray-300);
+      background: var(--gray-100);
+      color: var(--gray-500);
+      cursor: default;
+    }
+
+    .wrong-note-memo {
+      width: 100%;
+      min-height: 60px;
+      padding: 10px 14px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 13px;
+      resize: vertical;
+      margin-top: 8px;
+      transition: border-color 0.2s;
+    }
+    .wrong-note-memo:focus { border-color: var(--primary); outline: none; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border-radius: 12px;
+      background: var(--danger);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .badge.zero { background: var(--gray-300); }
+
+    .wrong-note-item {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 14px;
+      transition: all 0.2s;
+    }
+    .wrong-note-item:hover { box-shadow: var(--shadow-md); }
+
+    .wrong-note-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .wrong-note-filter .filter-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 2px solid var(--gray-200);
+      background: var(--white);
+      color: var(--gray-500);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .wrong-note-filter .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+    .wrong-note-filter .filter-chip.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .bookmark-indicator {
+      color: var(--accent);
+      font-size: 14px;
+      margin-left: 8px;
+    }
+
     @media (max-width: 768px) {
       /* ─── 홈 화면 ─── */
       .hero { flex-direction: column; padding: 30px 16px; gap: 20px; }
@@ -1126,6 +1243,10 @@
       .diag-box { font-size: 13px; padding: 14px 16px; }
       .rec-item { padding: 12px; }
 
+      /* ─── 학습 도구 ─── */
+      #section-study-tools > div { grid-template-columns: 1fr !important; }
+      .wrong-note-item { padding: 14px; }
+
       /* ─── 히어로 그리드 ─── */
       .hero-illustration { padding: 20px !important; }
       .hero-illustration div[style*="grid"] { gap: 8px !important; }
@@ -1146,7 +1267,8 @@
     <li><a href="#" class="active" onclick="goHome()">Home</a></li>
     <li><a href="#" onclick="document.getElementById('section-areas').scrollIntoView({behavior:'smooth'})">출제영역</a></li>
     <li><a href="#" onclick="document.getElementById('section-history').scrollIntoView({behavior:'smooth'})">이력</a></li>
-    <li><a href="#" onclick="document.getElementById('section-api').scrollIntoView({behavior:'smooth'})">API</a></li>
+    <li><a href="#" onclick="document.getElementById('section-study-tools').scrollIntoView({behavior:'smooth'})">학습도구</a></li>
+    <!-- API 메뉴 제거 -->
     <li><a href="#" onclick="document.getElementById('section-setup').scrollIntoView({behavior:'smooth'})">시험응시</a></li>
   </ul>
   <button class="btn-login" onclick="document.getElementById('section-setup').scrollIntoView({behavior:'smooth'})">
@@ -1266,6 +1388,29 @@
       </div>
     </div>
 
+    <!-- WRONG NOTES & BOOKMARKS -->
+    <div class="section" id="section-study-tools">
+      <h2 class="section-title">학습 도구</h2>
+      <p class="section-subtitle">오답 노트와 북마크로 효율적으로 복습하세요</p>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- 오답 노트 카드 -->
+        <div class="card" style="margin-top:0">
+          <h3><i class="fas fa-book-open" style="color:var(--danger);margin-right:6px"></i> 오답 노트 <span class="badge zero" id="wrong-note-count">0</span></h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">틀린 문제를 모아서 복습하세요</p>
+          <div class="wrong-note-filter" id="wrong-note-filter"></div>
+          <div id="wrong-notes-list"></div>
+        </div>
+
+        <!-- 북마크 카드 -->
+        <div class="card" style="margin-top:0">
+          <h3><i class="fas fa-star" style="color:var(--accent);margin-right:6px"></i> 북마크 <span class="badge zero" id="bookmark-count">0</span></h3>
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:16px">시험 중 표시한 문제들</p>
+          <div id="bookmarks-list"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- EXAM SETUP -->
     <div class="section" id="section-setup">
       <h2 class="section-title">시험 설정</h2>
@@ -1305,12 +1450,7 @@
       </div>
     </div>
 
-    <!-- API SOURCES -->
-    <div class="section" id="section-api">
-      <h2 class="section-title">연동 가능 공공데이터 API</h2>
-      <p class="section-subtitle">한국산업인력공단 무료 NCS API 목록</p>
-      <div id="api-sources" style="max-width:700px; margin:0 auto"></div>
-    </div>
+    <!-- API SOURCES (수험생에게 불필요하여 제거) -->
   </div>
 
   <!-- ═══════════════════════════════════════
@@ -1437,17 +1577,7 @@
           <div id="result-study-plan"></div>
         </div>
 
-        <div class="card" style="margin-top:20px">
-          <h3 style="margin-bottom:16px"><i class="fas fa-th" style="color:var(--accent)"></i> NCS 역량 진단 매트릭스</h3>
-          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">영역 x 난이도 x 유형별 정답률 교차 분석</p>
-          <div id="result-matrix"></div>
-        </div>
-
-        <div class="card" style="margin-top:20px">
-          <h3 style="margin-bottom:16px"><i class="fas fa-project-diagram" style="color:var(--primary)"></i> 에이전트 파이프라인 로그</h3>
-          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">4개 AI 에이전트가 분산 처리한 실행 기록입니다.</p>
-          <div id="result-pipeline"></div>
-        </div>
+        <!-- 역량 진단 매트릭스 및 파이프라인 로그: 수험생에게 불필요하여 제거 -->
 
         <div style="text-align:center;margin-top:24px;display:flex;gap:12px;justify-content:center">
           <button class="btn btn-outline" onclick="switchResultPage('pattern',document.querySelectorAll('.result-tab')[1])"><i class="fas fa-arrow-left"></i> 풀이 패턴</button>
@@ -1497,8 +1627,6 @@ function parseAsciiTables(text) {
       blockStart = -1;
     }
   }
-  if (blocks.length === 0) return text;
-
   const parseRow = (line) => {
     const parts = line.split('│').map(c => c.trim());
     if (parts.length > 0 && parts[0] === '') parts.shift();
@@ -1563,7 +1691,45 @@ function parseAsciiTables(text) {
 
     allLines.splice(start, end - start + 1, html);
   }
-  return allLines.join('\n');
+
+  // ── 마크다운 파이프 표 (| col | col |) 변환 ──
+  let result = allLines.join('\n');
+  const mdTableRe = /((?:^|\n)\|[^\n]+\|\s*\n\|[\s:|-]+\|\s*\n(?:\|[^\n]+\|\s*\n?)+)/g;
+  result = result.replace(mdTableRe, (block) => {
+    const rows = block.trim().split('\n').filter(r => r.trim());
+    if (rows.length < 2) return block;
+    const parseP = (line) => line.split('|').map(c => c.trim()).filter(c => c !== '');
+    const isSep = (line) => /^\|[\s:|-]+\|$/.test(line.trim());
+    const headerCells = parseP(rows[0]);
+    const dataRows = rows.filter((r, i) => i > 0 && !isSep(r));
+    let footerRow = null;
+    if (dataRows.length > 0) {
+      const lastC = parseP(dataRows[dataRows.length - 1]);
+      if (lastC[0] && /합계|소계|총계|^계$/.test(lastC[0])) {
+        footerRow = lastC;
+        dataRows.pop();
+      }
+    }
+    let html = '<div class="q-table-wrap"><table class="q-table"><thead><tr>';
+    headerCells.forEach(c => { html += `<th>${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    dataRows.forEach(row => {
+      const cells = parseP(row);
+      html += '<tr>';
+      cells.forEach(c => { html += `<td>${c}</td>`; });
+      html += '</tr>';
+    });
+    html += '</tbody>';
+    if (footerRow) {
+      html += '<tfoot><tr>';
+      footerRow.forEach(c => { html += `<td>${c}</td>`; });
+      html += '</tr></tfoot>';
+    }
+    html += '</table></div>';
+    return '\n' + html + '\n';
+  });
+
+  return result;
 }
 
 // ─── State ───
@@ -1714,13 +1880,21 @@ function renderQuestion() {
       <span class="cnum">${nums[i]}</span><span>${c}</span></li>`;
   }).join('');
 
+  const bmActive = isBookmarked(q.id) ? 'active' : '';
+  const bmIcon = isBookmarked(q.id) ? '★' : '☆';
+
   document.getElementById('question-area').innerHTML = `
     <div class="q-card">
-      <div class="q-meta">
-        <span class="tag tag-area">${q.area}</span>
-        <span class="tag ${lc[q.level]}">${lt[q.level]}</span>
-        <span class="tag tag-type">${q.type}</span>
-        <span class="tag tag-type">${q.subArea}</span>
+      <div class="q-card-header">
+        <div class="q-meta">
+          <span class="tag tag-area">${q.area}</span>
+          <span class="tag ${lc[q.level]}">${lt[q.level]}</span>
+          <span class="tag tag-type">${q.type}</span>
+          <span class="tag tag-type">${q.subArea}</span>
+        </div>
+        <button class="bookmark-btn ${bmActive}" onclick="toggleBookmark('${q.id}');renderQuestion()" title="북마크">
+          ${bmIcon}
+        </button>
       </div>
       <div class="q-number">
         <span class="qn-badge">${idx+1}</span> 문제 ${idx+1}
@@ -1896,28 +2070,7 @@ function renderResult(r) {
       '<div class="diag-box" style="border-color:var(--success)"><i class="fas fa-check-circle" style="color:var(--success);margin-right:6px"></i>모든 영역에서 우수한 사고 전략을 보여주고 있습니다.</div>';
   }
 
-  // 에이전트 파이프라인 로그
-  if (r.pipeline) {
-    const agentIcons = {
-      'AnswerExtractAgent': { icon: 'fa-clipboard-list', color: '#e67e22', label: '답안 추출' },
-      'EvaluationAgent': { icon: 'fa-award', color: '#2ecc71', label: '시험 평가' },
-      'DiagnosisAgent': { icon: 'fa-brain', color: '#9b59b6', label: 'AI 진단' },
-      'QuestionFetchAgent': { icon: 'fa-search', color: '#3498db', label: '문제 수집' }
-    };
-    const pipeHtml = r.pipeline.agents.map(ag => {
-      const info = agentIcons[ag.name] || { icon:'fa-cog', color:'#95a5a6', label: ag.name };
-      const logs = ag.log.map(l => {
-        const lIcon = l.level==='success'?'fa-check-circle':l.level==='error'?'fa-times-circle':'fa-info-circle';
-        const lColor = l.level==='success'?'var(--success)':l.level==='error'?'var(--danger)':'var(--gray-500)';
-        return `<div style="font-size:12px;color:var(--gray-700);padding:3px 0"><i class="fas ${lIcon}" style="color:${lColor};margin-right:4px;width:14px"></i>${l.message}</div>`;
-      }).join('');
-      return `<div style="display:flex;gap:14px;margin-bottom:16px;padding:14px;background:var(--gray-50);border-radius:10px;border:1px solid var(--gray-200)">
-        <div style="width:44px;height:44px;border-radius:12px;background:${info.color};color:white;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0"><i class="fas ${info.icon}"></i></div>
-        <div style="flex:1"><div style="font-weight:700;font-size:14px;margin-bottom:4px">${info.label} <span style="font-size:12px;color:var(--gray-500);font-weight:400">${ag.name}</span></div>${logs}</div>
-      </div>`;
-    }).join('');
-    document.getElementById('result-pipeline').innerHTML = pipeHtml;
-  }
+  // 파이프라인 로그 렌더링 제거됨 (수험생에게 불필요)
 
   const areas = [...new Set(r.details.map(d => d.area))];
   document.getElementById('review-tabs').innerHTML =
@@ -1925,133 +2078,10 @@ function renderResult(r) {
     areas.map(a => `<div class="rtab" onclick="filterReview('${a}',this)">${a}</div>`).join('');
   renderReview(r.details);
 
-  // ─── 역량 진단 매트릭스 로드 ───
-  loadCompetencyMatrix(r);
+  // 역량 매트릭스 제거됨
 }
 
-async function loadCompetencyMatrix(examResult) {
-  const matrixEl = document.getElementById('result-matrix');
-  if (!matrixEl) return;
-
-  // 현재 시험 결과에서 매트릭스 생성
-  const areaData = examResult.areaAnalysis || {};
-  const details = examResult.details || [];
-
-  // 영역 × 난이도 매트릭스 계산
-  const matrix = {};
-  const allAreas = Object.keys(areaData);
-  const levels = ['beginner', 'intermediate', 'advanced'];
-  const levelLabels = { beginner: '초급', intermediate: '중급', advanced: '고급' };
-  const types = ['PSAT형', '피듈형', '모듈형'];
-
-  // 초기화
-  allAreas.forEach(a => {
-    matrix[a] = { levels: {}, types: {}, total: { correct: 0, total: 0 } };
-    levels.forEach(l => matrix[a].levels[l] = { correct: 0, total: 0 });
-    types.forEach(t => matrix[a].types[t] = { correct: 0, total: 0 });
-  });
-
-  // 데이터 채우기
-  details.forEach(d => {
-    if (!matrix[d.area]) return;
-    const m = matrix[d.area];
-    m.total.total++;
-    if (d.isCorrect) m.total.correct++;
-    if (d.level && m.levels[d.level]) {
-      m.levels[d.level].total++;
-      if (d.isCorrect) m.levels[d.level].correct++;
-    }
-    // 유형 정보는 details에 없을 수 있으므로 별도 처리
-  });
-
-  // 누적 매트릭스도 로드 시도
-  let cumulative = null;
-  try {
-    const res = await fetch(apiUrl('/api/stats/matrix'));
-    cumulative = await res.json();
-  } catch(e) {}
-
-  // 현재 시험 매트릭스 테이블
-  let html = `<div style="overflow-x:auto">
-    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
-      <thead><tr style="background:var(--primary);color:white">
-        <th style="padding:10px 8px;text-align:left;border-radius:8px 0 0 0">영역</th>
-        <th style="padding:10px 8px;text-align:center">종합</th>
-        ${levels.map(l => `<th style="padding:10px 8px;text-align:center">${levelLabels[l]}</th>`).join('')}
-        <th style="padding:10px 8px;text-align:center;border-radius:0 8px 0 0">등급</th>
-      </tr></thead><tbody>`;
-
-  allAreas.forEach((area, idx) => {
-    const m = matrix[area];
-    const totalRate = m.total.total > 0 ? Math.round(m.total.correct / m.total.total * 100) : '-';
-    const grade = areaData[area]?.grade || '-';
-    const bgColor = idx % 2 === 0 ? 'var(--gray-50)' : 'white';
-
-    html += `<tr style="background:${bgColor}">
-      <td style="padding:8px;font-weight:600;white-space:nowrap">${area}</td>
-      <td style="padding:8px;text-align:center">${renderCell(totalRate)}</td>`;
-
-    levels.forEach(l => {
-      const ld = m.levels[l];
-      const rate = ld.total > 0 ? Math.round(ld.correct / ld.total * 100) : '-';
-      html += `<td style="padding:8px;text-align:center">${renderCell(rate)}</td>`;
-    });
-
-    const gradeColor = grade === 'A' ? 'var(--success)' : grade === 'B' ? 'var(--primary)' : grade === 'C' ? 'var(--warning)' : 'var(--danger)';
-    html += `<td style="padding:8px;text-align:center;font-weight:800;color:${gradeColor}">${grade}</td></tr>`;
-  });
-
-  html += '</tbody></table></div>';
-
-  // 누적 통계 매트릭스 (있는 경우)
-  if (cumulative && cumulative.areaSummary && cumulative.areaSummary.length > 0) {
-    html += `<h4 style="margin:20px 0 10px;font-size:14px;color:var(--gray-700)"><i class="fas fa-chart-line" style="color:var(--accent)"></i> 누적 역량 분석 (전체 시험 통합)</h4>`;
-    html += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-      <thead><tr style="background:var(--accent);color:white">
-        <th style="padding:10px 8px;text-align:left;border-radius:8px 0 0 0">영역</th>
-        <th style="padding:10px 8px;text-align:center">총 문항</th>
-        <th style="padding:10px 8px;text-align:center">정답</th>
-        <th style="padding:10px 8px;text-align:center">정답률</th>
-        <th style="padding:10px 8px;text-align:center;border-radius:0 8px 0 0">판정</th>
-      </tr></thead><tbody>`;
-
-    cumulative.areaSummary.forEach((row, idx) => {
-      const bg = idx % 2 === 0 ? 'var(--gray-50)' : 'white';
-      const verdict = row.accuracy >= 80 ? '우수' : row.accuracy >= 60 ? '양호' : row.accuracy >= 40 ? '보강필요' : '취약';
-      const vColor = row.accuracy >= 80 ? 'var(--success)' : row.accuracy >= 60 ? 'var(--primary)' : row.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)';
-      html += `<tr style="background:${bg}">
-        <td style="padding:8px;font-weight:600">${row.area}</td>
-        <td style="padding:8px;text-align:center">${row.total}</td>
-        <td style="padding:8px;text-align:center">${row.correct}</td>
-        <td style="padding:8px;text-align:center">${renderCell(row.accuracy)}</td>
-        <td style="padding:8px;text-align:center;font-weight:700;color:${vColor}">${verdict}</td>
-      </tr>`;
-    });
-
-    html += '</tbody></table></div>';
-
-    // 세부영역 약점 TOP 5
-    if (cumulative.bySubArea && cumulative.bySubArea.length > 0) {
-      const weakSubs = cumulative.bySubArea.filter(s => s.total >= 2).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
-      if (weakSubs.length > 0) {
-        html += `<h4 style="margin:20px 0 10px;font-size:14px;color:var(--danger)"><i class="fas fa-exclamation-circle"></i> 약점 세부영역 TOP ${weakSubs.length}</h4>`;
-        html += weakSubs.map((s, i) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${i%2===0?'var(--gray-50)':'white'};border-radius:8px;margin-bottom:4px">
-          <span style="width:24px;height:24px;border-radius:50%;background:var(--danger);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${i+1}</span>
-          <span style="flex:1;font-weight:600;font-size:13px">${s.area} > ${s.sub_area}</span>
-          <span style="font-size:13px;color:var(--danger);font-weight:700">${s.accuracy}% (${s.correct}/${s.total})</span>
-        </div>`).join('');
-      }
-    }
-  }
-
-  matrixEl.innerHTML = html;
-
-  function renderCell(rate) {
-    if (rate === '-') return '<span style="color:var(--gray-400)">-</span>';
-    const color = rate >= 80 ? 'var(--success)' : rate >= 60 ? 'var(--primary)' : rate >= 40 ? 'var(--warning)' : 'var(--danger)';
-    return `<span style="display:inline-block;min-width:44px;padding:3px 8px;border-radius:12px;background:${color}15;color:${color};font-weight:700;font-size:12px">${rate}%</span>`;
-  }
-} // end loadCompetencyMatrix
+// loadCompetencyMatrix 제거됨 (수험생에게 불필요)
 
 // ═══ 결과 페이지 탭 전환 ═══
 function switchResultPage(pageId, tabEl) {
@@ -2090,11 +2120,45 @@ function renderReview(details) {
     const icon = d.isCorrect
       ? '<span style="color:var(--success);font-weight:800"><i class="fas fa-check-circle"></i> 정답</span>'
       : '<span style="color:var(--danger);font-weight:800"><i class="fas fa-times-circle"></i> 오답</span>';
+
+    // 북마크 표시
+    const bmIndicator = isBookmarked(d.questionId)
+      ? '<span class="bookmark-indicator"><i class="fas fa-star"></i> 북마크됨</span>' : '';
+
+    // 오답인 경우 오답 노트 버튼
+    let wrongNoteHtml = '';
+    if (!d.isCorrect) {
+      const existingNotes = getWrongNotes();
+      const alreadyAdded = existingNotes.some(n => n.questionId === d.questionId);
+      if (alreadyAdded) {
+        wrongNoteHtml = `<button class="wrong-note-btn added" disabled><i class="fas fa-check"></i> 오답 노트에 추가됨</button>`;
+      } else {
+        const noteData = JSON.stringify({
+          questionId: d.questionId,
+          question: q.question,
+          choices: q.choices,
+          userAnswer: d.userAnswer,
+          correctAnswer: d.correctAnswer,
+          area: d.area,
+          subArea: d.subArea,
+          explanation: d.explanation
+        }).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        wrongNoteHtml = `
+          <button class="wrong-note-btn" onclick="addToWrongNotesFromReview(this, '${d.questionId}')">
+            <i class="fas fa-plus-circle"></i> 오답 노트에 추가
+          </button>
+          <textarea class="wrong-note-memo" id="memo-${d.questionId}" placeholder="왜 틀렸는지 메모를 남겨보세요... (선택사항)"></textarea>
+          <input type="hidden" id="notedata-${d.questionId}" value="${noteData}">`;
+      }
+    }
+
     return `<div class="q-card" style="margin-bottom:16px">
-      <div class="q-meta">${icon}<span class="tag tag-area">${d.area}</span><span class="tag tag-type">${d.subArea}</span></div>
+      <div class="q-meta">${icon}<span class="tag tag-area">${d.area}</span><span class="tag tag-type">${d.subArea}</span>${bmIndicator}</div>
       <div class="q-text" style="font-size:14px">${parseAsciiTables(q.question)}</div>
       <ul class="choices">${cl}</ul>
-      <div class="expl-box"><i class="fas fa-lightbulb"></i><strong>해설:</strong> ${d.explanation}</div></div>`;
+      <div class="expl-box"><i class="fas fa-lightbulb"></i><strong>해설:</strong> ${d.explanation}</div>
+      ${wrongNoteHtml}
+    </div>`;
   }).join('');
 }
 
@@ -2107,25 +2171,7 @@ function startRecommendedExam() {
   }, 300);
 }
 
-// ─── Load API Sources ───
-async function loadApiSources() {
-  try {
-    const res = await fetch(apiUrl('/api/external-sources'));
-    const data = await res.json();
-    document.getElementById('api-sources').innerHTML = data.sources.map(s => `
-      <div class="api-item">
-        <div class="api-icon"><i class="fas fa-database"></i></div>
-        <div>
-          <div class="api-name">${s.name}</div>
-          <div class="api-provider">${s.provider} | ${s.freeQuota}</div>
-          <div class="api-desc">${s.description}</div>
-          <a href="${s.url}" target="_blank">포털에서 보기 <i class="fas fa-external-link-alt"></i></a>
-        </div>
-      </div>`).join('');
-  } catch(e) { console.error(e); }
-}
-
-loadApiSources();
+// API Sources 섹션 제거됨 (수험생에게 불필요)
 
 // ─── Exam History ───
 async function loadExamHistory() {
@@ -2199,7 +2245,203 @@ loadExamHistory();
 
 // 결과 화면에서 홈으로 돌아갈 때 이력 새로고침
 const _origGoHome = goHome;
-goHome = function() { _origGoHome(); loadExamHistory(); };
+goHome = function() { _origGoHome(); loadExamHistory(); initStudyTools(); };
+
+// ═══════════════════════════════════════
+// 오답 노트 기능
+// ═══════════════════════════════════════
+function getWrongNotes() {
+  try {
+    return JSON.parse(localStorage.getItem('wrongNotes') || '[]');
+  } catch(e) { return []; }
+}
+
+function addToWrongNotes(detail) {
+  const notes = getWrongNotes();
+  if (notes.some(n => n.questionId === detail.questionId)) return false;
+  notes.push({
+    questionId: detail.questionId,
+    question: detail.question,
+    choices: detail.choices,
+    userAnswer: detail.userAnswer,
+    correctAnswer: detail.correctAnswer,
+    area: detail.area,
+    subArea: detail.subArea,
+    explanation: detail.explanation,
+    addedAt: new Date().toISOString(),
+    memo: detail.memo || ''
+  });
+  localStorage.setItem('wrongNotes', JSON.stringify(notes));
+  updateWrongNoteCountBadge();
+  return true;
+}
+
+function addToWrongNotesFromReview(btnEl, questionId) {
+  const dataEl = document.getElementById('notedata-' + questionId);
+  const memoEl = document.getElementById('memo-' + questionId);
+  if (!dataEl) return;
+  try {
+    const detail = JSON.parse(dataEl.value.replace(/&quot;/g, '"'));
+    detail.memo = memoEl ? memoEl.value : '';
+    if (addToWrongNotes(detail)) {
+      btnEl.className = 'wrong-note-btn added';
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<i class="fas fa-check"></i> 오답 노트에 추가됨';
+      if (memoEl) memoEl.style.display = 'none';
+    }
+  } catch(e) { console.error('오답 노트 추가 실패:', e); }
+}
+
+function removeFromWrongNotes(questionId) {
+  let notes = getWrongNotes();
+  notes = notes.filter(n => n.questionId !== questionId);
+  localStorage.setItem('wrongNotes', JSON.stringify(notes));
+  updateWrongNoteCountBadge();
+  renderWrongNotes();
+}
+
+function updateWrongNoteMemo(questionId, memo) {
+  const notes = getWrongNotes();
+  const note = notes.find(n => n.questionId === questionId);
+  if (note) {
+    note.memo = memo;
+    localStorage.setItem('wrongNotes', JSON.stringify(notes));
+  }
+}
+
+function updateWrongNoteCountBadge() {
+  const count = getWrongNotes().length;
+  const badge = document.getElementById('wrong-note-count');
+  if (badge) {
+    badge.textContent = count;
+    badge.className = count > 0 ? 'badge' : 'badge zero';
+  }
+}
+
+function renderWrongNotes(filterArea) {
+  const notes = getWrongNotes();
+  const listEl = document.getElementById('wrong-notes-list');
+  const filterEl = document.getElementById('wrong-note-filter');
+  if (!listEl) return;
+
+  updateWrongNoteCountBadge();
+
+  // 필터 칩 렌더링
+  if (filterEl) {
+    const areas = [...new Set(notes.map(n => n.area))];
+    filterEl.innerHTML = `<span class="filter-chip ${!filterArea ? 'active' : ''}" onclick="renderWrongNotes()">전체</span>` +
+      areas.map(a => `<span class="filter-chip ${filterArea === a ? 'active' : ''}" onclick="renderWrongNotes('${a}')">${a}</span>`).join('');
+  }
+
+  let filtered = notes;
+  if (filterArea) filtered = notes.filter(n => n.area === filterArea);
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray-500)">
+      <i class="fas fa-clipboard-check" style="font-size:32px;color:var(--gray-300);margin-bottom:10px;display:block"></i>
+      ${notes.length === 0 ? '아직 오답 노트가 없습니다.<br>시험 결과의 오답 정리에서 추가해보세요!' : '해당 영역의 오답 노트가 없습니다.'}
+    </div>`;
+    return;
+  }
+
+  const nums = ['①','②','③','④','⑤'];
+  listEl.innerHTML = filtered.map(n => {
+    const choicesHtml = n.choices.map((c, ci) => {
+      let cls = ci === n.correctAnswer ? 'correct' : '';
+      if (ci === n.userAnswer && ci !== n.correctAnswer) cls = 'wrong';
+      return `<li class="${cls}" style="padding:10px 12px;font-size:13px"><span class="cnum" style="width:22px;height:22px;min-width:22px;font-size:11px">${nums[ci]}</span><span>${c}</span>
+        ${ci === n.correctAnswer ? ' <i class="fas fa-check" style="color:var(--success)"></i>' : ''}
+        ${ci === n.userAnswer && ci !== n.correctAnswer ? ' <i class="fas fa-times" style="color:var(--danger)"></i>' : ''}</li>`;
+    }).join('');
+
+    const addedDate = n.addedAt ? new Date(n.addedAt).toLocaleDateString('ko-KR') : '';
+
+    return `<div class="wrong-note-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <span class="tag tag-area" style="font-size:11px">${n.area}</span>
+          <span class="tag tag-type" style="font-size:11px">${n.subArea}</span>
+          <span style="font-size:11px;color:var(--gray-500);margin-left:6px">${addedDate}</span>
+        </div>
+        <button class="btn btn-sm" style="padding:6px 14px;font-size:12px;background:var(--success-light);color:var(--success);border-radius:20px" onclick="removeFromWrongNotes('${n.questionId}')">
+          <i class="fas fa-check"></i> 이해했음
+        </button>
+      </div>
+      <div style="font-size:14px;line-height:1.8;margin-bottom:12px;white-space:pre-line">${parseAsciiTables(n.question)}</div>
+      <ul class="choices" style="list-style:none">${choicesHtml}</ul>
+      <div class="expl-box" style="margin-top:10px"><i class="fas fa-lightbulb"></i><strong>해설:</strong> ${n.explanation}</div>
+      ${n.memo ? `<div style="margin-top:10px;padding:10px 14px;background:var(--accent-light);border-radius:8px;font-size:13px"><i class="fas fa-pen" style="color:var(--accent);margin-right:6px"></i><strong>내 메모:</strong> ${n.memo}</div>` : ''}
+      <textarea class="wrong-note-memo" placeholder="메모 수정..." oninput="updateWrongNoteMemo('${n.questionId}', this.value)" style="margin-top:8px">${n.memo || ''}</textarea>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// 북마크 기능
+// ═══════════════════════════════════════
+function getBookmarks() {
+  try {
+    return JSON.parse(localStorage.getItem('bookmarkedQuestions') || '[]');
+  } catch(e) { return []; }
+}
+
+function isBookmarked(questionId) {
+  return getBookmarks().includes(questionId);
+}
+
+function toggleBookmark(questionId) {
+  let bookmarks = getBookmarks();
+  if (bookmarks.includes(questionId)) {
+    bookmarks = bookmarks.filter(id => id !== questionId);
+  } else {
+    bookmarks.push(questionId);
+  }
+  localStorage.setItem('bookmarkedQuestions', JSON.stringify(bookmarks));
+  updateBookmarkCountBadge();
+}
+
+function updateBookmarkCountBadge() {
+  const count = getBookmarks().length;
+  const badge = document.getElementById('bookmark-count');
+  if (badge) {
+    badge.textContent = count;
+    badge.className = count > 0 ? 'badge' : 'badge zero';
+  }
+}
+
+function renderBookmarks() {
+  const bookmarks = getBookmarks();
+  const listEl = document.getElementById('bookmarks-list');
+  if (!listEl) return;
+
+  updateBookmarkCountBadge();
+
+  if (bookmarks.length === 0) {
+    listEl.innerHTML = `<div style="text-align:center;padding:30px;color:var(--gray-500)">
+      <i class="fas fa-star" style="font-size:32px;color:var(--gray-300);margin-bottom:10px;display:block"></i>
+      아직 북마크한 문제가 없습니다.<br>시험 중 ☆ 아이콘을 눌러 북마크하세요!
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = bookmarks.map((id, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${i%2===0?'var(--gray-50)':'var(--white)'};border-radius:8px;margin-bottom:4px">
+      <i class="fas fa-star" style="color:var(--accent)"></i>
+      <span style="flex:1;font-size:13px;font-weight:600;color:var(--gray-700)">문제 ID: ${id}</span>
+      <button style="background:none;border:none;color:var(--gray-500);cursor:pointer;font-size:14px;padding:4px" onclick="toggleBookmark('${id}');renderBookmarks()" title="북마크 해제">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+// ═══ 학습 도구 초기 렌더링 ═══
+function initStudyTools() {
+  renderWrongNotes();
+  renderBookmarks();
+}
+
+initStudyTools();
 
 // ─── PWA Service Worker 등록 ───
 if ('serviceWorker' in navigator) {

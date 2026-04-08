@@ -123,6 +123,52 @@ const presets = [
     typeDist: { '피듈형': 50, 'PSAT형': 30, '모듈형': 20 },
     totalQuestions: 20,
     totalTime: 1800
+  },
+  // ─── 서울시 출연기관 ───
+  {
+    companyName: 'SBA (서울경제진흥원)',
+    description: '의사소통·조직이해 비중 높음, 피듈형 중심, 중소기업 지원 실무',
+    areaWeights: { '의사소통능력': 25, '수리능력': 20, '문제해결능력': 15, '자원관리능력': 10, '정보능력': 5, '조직이해능력': 10, '대인관계능력': 5, '직업윤리': 10 },
+    levelDist: { beginner: 25, intermediate: 55, advanced: 20 },
+    typeDist: { '피듈형': 45, 'PSAT형': 35, '모듈형': 20 },
+    totalQuestions: 20,
+    totalTime: 1800
+  },
+  {
+    companyName: 'KOTRA (대한무역투자진흥공사)',
+    description: 'PSAT형 비중 높음, 의사소통·수리·문제해결 강조, 국제무역 실무',
+    areaWeights: { '의사소통능력': 25, '수리능력': 25, '문제해결능력': 20, '자원관리능력': 8, '정보능력': 7, '조직이해능력': 5, '직업윤리': 5, '대인관계능력': 5 },
+    levelDist: { beginner: 15, intermediate: 45, advanced: 40 },
+    typeDist: { 'PSAT형': 65, '피듈형': 25, '모듈형': 10 },
+    totalQuestions: 25,
+    totalTime: 2250
+  },
+  {
+    companyName: 'SH공사 (서울주택도시공사)',
+    description: '수리·자원관리·조직이해 비중 높음, 도시개발·주거복지 관련',
+    areaWeights: { '의사소통능력': 20, '수리능력': 25, '문제해결능력': 18, '자원관리능력': 12, '정보능력': 5, '조직이해능력': 10, '직업윤리': 5, '기술능력': 5 },
+    levelDist: { beginner: 20, intermediate: 50, advanced: 30 },
+    typeDist: { 'PSAT형': 55, '피듈형': 30, '모듈형': 15 },
+    totalQuestions: 20,
+    totalTime: 1800
+  },
+  {
+    companyName: '서울산업진흥원 (SeSAC)',
+    description: '정보능력·기술능력 비중 있음, 디지털 전환·창업지원 실무',
+    areaWeights: { '의사소통능력': 20, '수리능력': 20, '문제해결능력': 15, '자원관리능력': 8, '정보능력': 12, '조직이해능력': 7, '기술능력': 10, '직업윤리': 5, '자기개발능력': 3 },
+    levelDist: { beginner: 20, intermediate: 50, advanced: 30 },
+    typeDist: { 'PSAT형': 50, '피듈형': 30, '모듈형': 20 },
+    totalQuestions: 20,
+    totalTime: 1800
+  },
+  {
+    companyName: '서울시설공단',
+    description: '자원관리·직업윤리 비중 높음, 시설관리·안전 실무',
+    areaWeights: { '의사소통능력': 20, '수리능력': 20, '문제해결능력': 15, '자원관리능력': 15, '정보능력': 5, '조직이해능력': 5, '직업윤리': 10, '기술능력': 5, '대인관계능력': 5 },
+    levelDist: { beginner: 25, intermediate: 50, advanced: 25 },
+    typeDist: { '피듈형': 45, 'PSAT형': 35, '모듈형': 20 },
+    totalQuestions: 20,
+    totalTime: 1800
   }
 ];
 
