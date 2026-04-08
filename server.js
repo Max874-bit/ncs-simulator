@@ -123,6 +123,17 @@ app.get('/api/stats/score-trend', (req, res) => {
 });
 
 /**
+ * 역량 진단 매트릭스
+ */
+app.get('/api/stats/matrix', (req, res) => {
+  try {
+    res.json(orchestrator.getCompetencyMatrix());
+  } catch (err) {
+    res.status(500).json({ error: '매트릭스 조회 오류' });
+  }
+});
+
+/**
  * 문제 통계
  */
 app.get('/api/stats/questions', (req, res) => {

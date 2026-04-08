@@ -310,31 +310,8 @@
       position: relative;
       overflow: hidden;
     }
-    .hero-illustration .laptop {
-      font-size: 120px;
-      color: var(--primary);
-      opacity: 0.6;
-      z-index: 1;
-    }
-    .float-icon {
-      position: absolute;
-      width: 56px; height: 56px;
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      box-shadow: var(--shadow-md);
-      animation: float 3s ease-in-out infinite;
-      z-index: 2;
-    }
-    .float-icon.fi-1 { background: var(--accent); color: white; top: 20px; right: 30px; animation-delay: 0s; }
-    .float-icon.fi-2 { background: var(--success); color: white; bottom: 30px; left: 20px; animation-delay: 1s; }
-    .float-icon.fi-3 { background: var(--white); color: var(--primary); top: 50px; left: 40px; animation-delay: 0.5s; }
-    .float-icon.fi-4 { background: var(--danger); color: white; bottom: 60px; right: 50px; animation-delay: 1.5s; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+    .hero-illustration {
+      font-size: 14px;
     }
 
     /* ─── 진행 도트 (hero 하단) ─── */
@@ -1044,12 +1021,8 @@
       }
 
       /* ─── 제출 버튼 ─── */
-      .btn-danger {
-        padding: 13px 24px;
-        font-size: 15px;
-        width: 100%;
-        border-radius: 12px;
-      }
+      .submit-area-desktop { display: none; }
+      #btn-submit-mobile { display: inline-flex !important; }
 
       /* ─── 결과 화면 ─── */
       .result-hero { padding: 24px 14px; margin-bottom: 14px; }
@@ -1070,6 +1043,21 @@
 
       /* ─── API 카드 ─── */
       .api-card { padding: 14px; }
+
+      /* ─── 결과 화면 카드 ─── */
+      .score-ring { width: 140px; height: 140px; font-size: 42px; }
+      .pass-pill { font-size: 15px; padding: 8px 20px; }
+      .pass-pct { font-size: 13px; }
+      .area-row .alabel { width: 80px; font-size: 12px; }
+      .area-row .afill { font-size: 10px; padding-left: 8px; }
+      .diag-box { font-size: 13px; padding: 14px 16px; }
+      .rec-item { padding: 12px; }
+
+      /* ─── 히어로 그리드 ─── */
+      .hero-illustration { padding: 20px !important; }
+      .hero-illustration div[style*="grid"] { gap: 8px !important; }
+      .hero-illustration div[style*="grid"] > div { padding: 10px !important; }
+      .hero-illustration div[style*="grid"] > div > div:first-child { font-size: 22px !important; }
     }
   </style>
 </head>
@@ -1125,12 +1113,29 @@
         </div>
       </div>
       <div class="hero-visual">
-        <div class="hero-illustration">
-          <i class="fas fa-laptop laptop"></i>
-          <div class="float-icon fi-1"><i class="fas fa-trophy"></i></div>
-          <div class="float-icon fi-2"><i class="fas fa-check-circle"></i></div>
-          <div class="float-icon fi-3"><i class="fas fa-clock"></i></div>
-          <div class="float-icon fi-4"><i class="fas fa-chart-line"></i></div>
+        <div class="hero-illustration" style="flex-direction:column;gap:16px;padding:32px">
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;width:100%">
+            <div style="background:rgba(255,255,255,0.85);border-radius:12px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:900;color:var(--primary)">251+</div>
+              <div style="font-size:11px;color:var(--gray-700);font-weight:600">정적 문제은행</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.85);border-radius:12px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:900;color:var(--accent)">63</div>
+              <div style="font-size:11px;color:var(--gray-700);font-weight:600">동적 생성 템플릿</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.85);border-radius:12px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:900;color:var(--success)">11</div>
+              <div style="font-size:11px;color:var(--gray-700);font-weight:600">NCS 출제영역</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.85);border-radius:12px;padding:16px;text-align:center">
+              <div style="font-size:28px;font-weight:900;color:var(--danger)">4</div>
+              <div style="font-size:11px;color:var(--gray-700);font-weight:600">AI 에이전트</div>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.7);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--gray-700);text-align:center;font-weight:500">
+            <i class="fas fa-shield-alt" style="color:var(--primary);margin-right:4px"></i>
+            매 시험마다 중복 없는 새 문제 출제
+          </div>
         </div>
       </div>
     </div>
@@ -1141,19 +1146,19 @@
       <p class="section-subtitle">실전처럼 풀고, AI가 진단하고, 맞춤 보강까지</p>
       <div class="features-grid">
         <div class="card feature-card">
-          <div class="icon-circle"><i class="fas fa-file-alt"></i></div>
-          <h3>실전 시험 시뮬레이션</h3>
-          <p>초급/중급/고급 난이도별 문제를 실제 NCS 시험과 동일한 환경에서 풀어볼 수 있습니다. 타이머, 문제 맵, 답안 마킹까지.</p>
+          <div class="icon-circle"><i class="fas fa-pen-fancy"></i></div>
+          <h3>실전 CBT 시뮬레이션</h3>
+          <p>PSAT형 61% / 피듈형 28% / 모듈형 11% 현행 출제 비율 반영. 기관별 프리셋으로 목표 기관 맞춤 연습.</p>
         </div>
         <div class="card feature-card">
-          <div class="icon-circle"><i class="fas fa-robot"></i></div>
-          <h3>AI 자동 채점 & 진단</h3>
-          <p>제출 즉시 합격/불합격 판정, 합격 가능성 %, 영역별 등급, 약점 세부영역을 AI가 자동으로 분석합니다.</p>
+          <div class="icon-circle"><i class="fas fa-chart-pie"></i></div>
+          <h3>자동 채점 및 역량 진단</h3>
+          <p>제출 즉시 합격 판정, 영역별 등급, 세부영역 약점을 분석합니다. 누적 데이터로 성장 추이까지 추적.</p>
         </div>
         <div class="card feature-card">
-          <div class="icon-circle"><i class="fas fa-bullseye"></i></div>
-          <h3>맞춤 보강 추천</h3>
-          <p>오답 패턴을 분석하여 가장 효과적으로 점수를 올릴 수 있는 보강 문제를 AI가 자동으로 선별해 추천합니다.</p>
+          <div class="icon-circle"><i class="fas fa-crosshairs"></i></div>
+          <h3>약점 집중 보강</h3>
+          <p>��답 패턴을 기반으로 가장 효과적인 보강 문제를 자동 선별. 학습 계획과 예상 소요일까지 제시합니다.</p>
         </div>
       </div>
     </div>
@@ -1193,6 +1198,13 @@
       <h2 class="section-title">시험 설정</h2>
       <p class="section-subtitle">난이도와 문제 수를 선택하고 시험을 시작하세요</p>
       <div class="card setup-card">
+        <div class="form-group" style="margin-bottom:20px">
+          <label><i class="fas fa-building"></i> 목표 기관 (기출 유형)</label>
+          <select id="select-company" onchange="applyPreset()">
+            <option value="">자유 설정</option>
+          </select>
+          <div id="preset-desc" style="font-size:12px;color:var(--gray-500);margin-top:6px;display:none"></div>
+        </div>
         <div class="setup-grid">
           <div class="form-group">
             <label><i class="fas fa-layer-group"></i> 난이도</label>
@@ -1209,11 +1221,12 @@
               <option value="10">10문제 (연습)</option>
               <option value="15">15문제 (미니 모의)</option>
               <option value="20" selected>20문제 (실전 모의)</option>
+              <option value="25">25문제 (실전 확장)</option>
               <option value="30">30문제 (풀 모의고사)</option>
             </select>
           </div>
         </div>
-        <button class="btn btn-primary btn-block" onclick="startExam()">
+        <button class="btn btn-primary btn-block" id="btn-start-exam" onclick="startExam()">
           <i class="fas fa-play-circle"></i> 시험 시작하기
         </button>
       </div>
@@ -1256,12 +1269,15 @@
         <button class="btn btn-outline-primary btn-sm" onclick="prevQuestion()">
           <i class="fas fa-arrow-left"></i> 이전
         </button>
+        <button class="btn btn-danger btn-sm" id="btn-submit-mobile" onclick="submitExam()" style="display:none">
+          <i class="fas fa-paper-plane"></i> 제출
+        </button>
         <button class="btn btn-blue btn-sm" id="btn-next" onclick="nextQuestion()">
           다음 <i class="fas fa-arrow-right"></i>
         </button>
       </div>
 
-      <div style="text-align:center; margin-top:30px">
+      <div style="text-align:center; margin-top:30px; margin-bottom:100px" class="submit-area-desktop">
         <button class="btn btn-danger" onclick="submitExam()">
           <i class="fas fa-paper-plane"></i> 답안 제출하기
         </button>
@@ -1290,7 +1306,7 @@
       </div>
 
       <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-brain" style="color:var(--accent)"></i> AI 종합 진단</h3>
+        <h3 style="margin-bottom:16px"><i class="fas fa-file-medical-alt" style="color:var(--accent)"></i> 종합 진단</h3>
         <div id="result-overall-diagnosis"></div>
       </div>
 
@@ -1300,14 +1316,20 @@
       </div>
 
       <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:8px"><i class="fas fa-magic" style="color:var(--accent)"></i> AI 추천 보강 문제</h3>
-        <p style="font-size:14px; color:var(--gray-500); margin-bottom:20px">약점 영역을 집중 보강할 수 있는 문제를 AI가 자동 선별했습니다.</p>
+        <h3 style="margin-bottom:8px"><i class="fas fa-tasks" style="color:var(--accent)"></i> 추천 보강 문제</h3>
+        <p style="font-size:14px; color:var(--gray-500); margin-bottom:20px">약점 영역을 집중 보강할 수 있는 문제를 자동 선별했습니다.</p>
         <div id="result-recommendations"></div>
       </div>
 
       <div class="card" style="margin-top:20px">
-        <h3 style="margin-bottom:16px"><i class="fas fa-calendar-alt" style="color:var(--success)"></i> AI 학습 계획</h3>
+        <h3 style="margin-bottom:16px"><i class="fas fa-calendar-alt" style="color:var(--success)"></i> 학습 계획</h3>
         <div id="result-study-plan"></div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <h3 style="margin-bottom:16px"><i class="fas fa-th" style="color:var(--accent)"></i> NCS 역량 진단 매트릭스</h3>
+        <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">영역 × 난이도 × 유형별 정답률 교차 분석</p>
+        <div id="result-matrix"></div>
       </div>
 
       <div class="card" style="margin-top:20px">
@@ -1444,18 +1466,64 @@ function showScreen(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ─── Company Presets ───
+let companyPresets = [];
+
+async function loadCompanyPresets() {
+  try {
+    const res = await fetch(apiUrl('/api/presets'));
+    const data = await res.json();
+    companyPresets = data.presets || [];
+    const select = document.getElementById('select-company');
+    companyPresets.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.company_name;
+      opt.textContent = p.company_name;
+      opt.dataset.desc = p.description || '';
+      opt.dataset.count = p.total_questions || 20;
+      select.appendChild(opt);
+    });
+  } catch(e) { console.error('프리셋 로드 실패:', e); }
+}
+
+function applyPreset() {
+  const sel = document.getElementById('select-company');
+  const desc = document.getElementById('preset-desc');
+  const name = sel.value;
+  if (!name) { desc.style.display = 'none'; return; }
+  const preset = companyPresets.find(p => p.company_name === name);
+  if (preset) {
+    desc.style.display = 'block';
+    desc.innerHTML = `<i class="fas fa-info-circle" style="color:var(--primary)"></i> ${preset.description}` +
+      (preset.total_questions ? ` | 기본 ${preset.total_questions}문제` : '');
+    document.getElementById('select-count').value = String(preset.total_questions || 20);
+  }
+}
+
+loadCompanyPresets();
+
 // ─── Start Exam ───
 async function startExam() {
   const level = document.getElementById('select-level').value;
   const count = parseInt(document.getElementById('select-count').value);
+  const company = document.getElementById('select-company').value;
+
+  const btn = document.getElementById('btn-start-exam');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 문제 생성 중...';
 
   try {
     const res = await fetch(apiUrl('/api/exam/generate'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level: level || undefined, questionCount: count })
+      body: JSON.stringify({ level: level || undefined, questionCount: count, company: company || undefined })
     });
     const data = await res.json();
+
+    if (data.error) {
+      alert(data.error);
+      return;
+    }
 
     examState = {
       examId: data.examId,
@@ -1468,7 +1536,8 @@ async function startExam() {
     };
 
     const lt = { beginner: '초급', intermediate: '중급', advanced: '고급' };
-    document.getElementById('exam-level-badge').textContent = level ? lt[level] : '혼합';
+    const label = company ? company : (level ? lt[level] : '혼합');
+    document.getElementById('exam-level-badge').textContent = label;
 
     showScreen('exam');
     renderQuestion();
@@ -1476,6 +1545,9 @@ async function startExam() {
     startTimer();
   } catch (err) {
     alert('시험 생성 실패: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play-circle"></i> 시험 시작하기';
   }
 }
 
@@ -1602,7 +1674,7 @@ function renderResult(r) {
       <span class="agrade grade-${s.grade}">${s.grade}</span></div>`;
   }).join('');
 
-  document.getElementById('result-overall-diagnosis').innerHTML = `<div class="diag-box"><i class="fas fa-robot" style="color:var(--primary);margin-right:6px"></i>${r.overallDiagnosis}</div>`;
+  document.getElementById('result-overall-diagnosis').innerHTML = `<div class="diag-box"><i class="fas fa-clipboard-check" style="color:var(--primary);margin-right:6px"></i>${r.overallDiagnosis}</div>`;
 
   document.getElementById('result-area-diagnosis').innerHTML = Object.entries(r.areaAnalysis).map(([a,s]) => {
     const bc = s.rate>=80?'':s.rate>=50?'warn':'danger';
@@ -1672,7 +1744,134 @@ function renderResult(r) {
     `<div class="rtab active" onclick="filterReview('all',this)">전체</div>` +
     areas.map(a => `<div class="rtab" onclick="filterReview('${a}',this)">${a}</div>`).join('');
   renderReview(r.details);
+
+  // ─── 역량 진단 매트릭스 로드 ───
+  loadCompetencyMatrix(r);
 }
+
+async function loadCompetencyMatrix(examResult) {
+  const matrixEl = document.getElementById('result-matrix');
+  if (!matrixEl) return;
+
+  // 현재 시험 결과에서 매트릭스 생성
+  const areaData = examResult.areaAnalysis || {};
+  const details = examResult.details || [];
+
+  // 영역 × 난이도 매트릭스 계산
+  const matrix = {};
+  const allAreas = Object.keys(areaData);
+  const levels = ['beginner', 'intermediate', 'advanced'];
+  const levelLabels = { beginner: '초급', intermediate: '중급', advanced: '고급' };
+  const types = ['PSAT형', '피듈형', '모듈형'];
+
+  // 초기화
+  allAreas.forEach(a => {
+    matrix[a] = { levels: {}, types: {}, total: { correct: 0, total: 0 } };
+    levels.forEach(l => matrix[a].levels[l] = { correct: 0, total: 0 });
+    types.forEach(t => matrix[a].types[t] = { correct: 0, total: 0 });
+  });
+
+  // 데이터 채우기
+  details.forEach(d => {
+    if (!matrix[d.area]) return;
+    const m = matrix[d.area];
+    m.total.total++;
+    if (d.isCorrect) m.total.correct++;
+    if (d.level && m.levels[d.level]) {
+      m.levels[d.level].total++;
+      if (d.isCorrect) m.levels[d.level].correct++;
+    }
+    // 유형 정보는 details에 없을 수 있으므로 별도 처리
+  });
+
+  // 누적 매트릭스도 로드 시도
+  let cumulative = null;
+  try {
+    const res = await fetch(apiUrl('/api/stats/matrix'));
+    cumulative = await res.json();
+  } catch(e) {}
+
+  // 현재 시험 매트릭스 테이블
+  let html = `<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px">
+      <thead><tr style="background:var(--primary);color:white">
+        <th style="padding:10px 8px;text-align:left;border-radius:8px 0 0 0">영역</th>
+        <th style="padding:10px 8px;text-align:center">종합</th>
+        ${levels.map(l => `<th style="padding:10px 8px;text-align:center">${levelLabels[l]}</th>`).join('')}
+        <th style="padding:10px 8px;text-align:center;border-radius:0 8px 0 0">등급</th>
+      </tr></thead><tbody>`;
+
+  allAreas.forEach((area, idx) => {
+    const m = matrix[area];
+    const totalRate = m.total.total > 0 ? Math.round(m.total.correct / m.total.total * 100) : '-';
+    const grade = areaData[area]?.grade || '-';
+    const bgColor = idx % 2 === 0 ? 'var(--gray-50)' : 'white';
+
+    html += `<tr style="background:${bgColor}">
+      <td style="padding:8px;font-weight:600;white-space:nowrap">${area}</td>
+      <td style="padding:8px;text-align:center">${renderCell(totalRate)}</td>`;
+
+    levels.forEach(l => {
+      const ld = m.levels[l];
+      const rate = ld.total > 0 ? Math.round(ld.correct / ld.total * 100) : '-';
+      html += `<td style="padding:8px;text-align:center">${renderCell(rate)}</td>`;
+    });
+
+    const gradeColor = grade === 'A' ? 'var(--success)' : grade === 'B' ? 'var(--primary)' : grade === 'C' ? 'var(--warning)' : 'var(--danger)';
+    html += `<td style="padding:8px;text-align:center;font-weight:800;color:${gradeColor}">${grade}</td></tr>`;
+  });
+
+  html += '</tbody></table></div>';
+
+  // 누적 통계 매트릭스 (있는 경우)
+  if (cumulative && cumulative.areaSummary && cumulative.areaSummary.length > 0) {
+    html += `<h4 style="margin:20px 0 10px;font-size:14px;color:var(--gray-700)"><i class="fas fa-chart-line" style="color:var(--accent)"></i> 누적 역량 분석 (전체 시험 통합)</h4>`;
+    html += `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:var(--accent);color:white">
+        <th style="padding:10px 8px;text-align:left;border-radius:8px 0 0 0">영역</th>
+        <th style="padding:10px 8px;text-align:center">총 문항</th>
+        <th style="padding:10px 8px;text-align:center">정답</th>
+        <th style="padding:10px 8px;text-align:center">정답률</th>
+        <th style="padding:10px 8px;text-align:center;border-radius:0 8px 0 0">판정</th>
+      </tr></thead><tbody>`;
+
+    cumulative.areaSummary.forEach((row, idx) => {
+      const bg = idx % 2 === 0 ? 'var(--gray-50)' : 'white';
+      const verdict = row.accuracy >= 80 ? '우수' : row.accuracy >= 60 ? '양호' : row.accuracy >= 40 ? '보강필요' : '취약';
+      const vColor = row.accuracy >= 80 ? 'var(--success)' : row.accuracy >= 60 ? 'var(--primary)' : row.accuracy >= 40 ? 'var(--warning)' : 'var(--danger)';
+      html += `<tr style="background:${bg}">
+        <td style="padding:8px;font-weight:600">${row.area}</td>
+        <td style="padding:8px;text-align:center">${row.total}</td>
+        <td style="padding:8px;text-align:center">${row.correct}</td>
+        <td style="padding:8px;text-align:center">${renderCell(row.accuracy)}</td>
+        <td style="padding:8px;text-align:center;font-weight:700;color:${vColor}">${verdict}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+
+    // 세부영역 약점 TOP 5
+    if (cumulative.bySubArea && cumulative.bySubArea.length > 0) {
+      const weakSubs = cumulative.bySubArea.filter(s => s.total >= 2).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
+      if (weakSubs.length > 0) {
+        html += `<h4 style="margin:20px 0 10px;font-size:14px;color:var(--danger)"><i class="fas fa-exclamation-circle"></i> 약점 세부영역 TOP ${weakSubs.length}</h4>`;
+        html += weakSubs.map((s, i) => `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${i%2===0?'var(--gray-50)':'white'};border-radius:8px;margin-bottom:4px">
+          <span style="width:24px;height:24px;border-radius:50%;background:var(--danger);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${i+1}</span>
+          <span style="flex:1;font-weight:600;font-size:13px">${s.area} > ${s.sub_area}</span>
+          <span style="font-size:13px;color:var(--danger);font-weight:700">${s.accuracy}% (${s.correct}/${s.total})</span>
+        </div>`).join('');
+      }
+    }
+  }
+
+  matrixEl.innerHTML = html;
+
+  function renderCell(rate) {
+    if (rate === '-') return '<span style="color:var(--gray-400)">-</span>';
+    const color = rate >= 80 ? 'var(--success)' : rate >= 60 ? 'var(--primary)' : rate >= 40 ? 'var(--warning)' : 'var(--danger)';
+    return `<span style="display:inline-block;min-width:44px;padding:3px 8px;border-radius:12px;background:${color}15;color:${color};font-weight:700;font-size:12px">${rate}%</span>`;
+  }
+} // end loadCompetencyMatrix
 
 function filterReview(tab, el) {
   document.querySelectorAll('.rtab').forEach(t => t.classList.remove('active'));

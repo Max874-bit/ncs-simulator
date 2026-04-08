@@ -103,8 +103,14 @@ class NcsDatabase {
         area          TEXT,
         sub_area      TEXT,
         level         TEXT,
-        FOREIGN KEY (exam_id) REFERENCES exam_sessions(exam_id) ON DELETE CASCADE,
-        FOREIGN KEY (question_id) REFERENCES questions(id)
+        FOREIGN KEY (exam_id) REFERENCES exam_sessions(exam_id) ON DELETE CASCADE
+      );
+
+      -- 출제 이력 (중복 방지용 — 시험 생성 시점에 기록)
+      CREATE TABLE IF NOT EXISTS exam_question_log (
+        exam_id       TEXT NOT NULL,
+        question_id   TEXT NOT NULL,
+        PRIMARY KEY (exam_id, question_id)
       );
 
       -- 인덱스
@@ -113,6 +119,7 @@ class NcsDatabase {
       CREATE INDEX IF NOT EXISTS idx_q_active ON questions(is_active);
       CREATE INDEX IF NOT EXISTS idx_ea_exam ON exam_answers(exam_id);
       CREATE INDEX IF NOT EXISTS idx_es_date ON exam_sessions(started_at);
+      CREATE INDEX IF NOT EXISTS idx_eql_qid ON exam_question_log(question_id);
     `);
   }
 
@@ -383,6 +390,96 @@ class NcsDatabase {
         level_dist: p.level_dist ? JSON.parse(p.level_dist) : null,
         type_dist: p.type_dist ? JSON.parse(p.type_dist) : null
       }));
+  }
+
+  // ═══════════════════════════════════════
+  //  기출 이력 (중복 방지용)
+  // ═══════════════════════════════════════
+
+  /** 시험 생성 시 출제 문제 ID 기록 */
+  logExamQuestions(examId, questionIds) {
+    const insert = this.db.prepare(
+      'INSERT OR IGNORE INTO exam_question_log (exam_id, question_id) VALUES (?, ?)'
+    );
+    const insertAll = this.db.transaction((ids) => {
+      for (const qid of ids) insert.run(examId, qid);
+    });
+    insertAll(questionIds);
+  }
+
+  /** 최근 N회 시험에서 출제된 문제 ID 목록 (생성 시점 기준) */
+  getRecentQuestionIds(recentExams = 5) {
+    const rows = this.db.prepare(`
+      SELECT DISTINCT eql.question_id
+      FROM exam_question_log eql
+      WHERE eql.exam_id IN (
+        SELECT exam_id FROM exam_sessions
+        ORDER BY started_at DESC LIMIT ?
+      )
+    `).all(recentExams);
+    return rows.map(r => r.question_id);
+  }
+
+  /** 영역별·난이도별·유형별 정답률 매트릭스 */
+  getCompetencyMatrix() {
+    // 영역별 정답률
+    const byArea = this.db.prepare(`
+      SELECT area, level,
+        COUNT(*) as total,
+        SUM(is_correct) as correct,
+        ROUND(SUM(is_correct) * 100.0 / COUNT(*), 1) as accuracy
+      FROM exam_answers
+      GROUP BY area, level
+    `).all();
+
+    // 영역별·유형별 정답률
+    const byAreaType = this.db.prepare(`
+      SELECT ea.area, q.type,
+        COUNT(*) as total,
+        SUM(ea.is_correct) as correct,
+        ROUND(SUM(ea.is_correct) * 100.0 / COUNT(*), 1) as accuracy
+      FROM exam_answers ea
+      LEFT JOIN questions q ON ea.question_id = q.id
+      WHERE q.type IS NOT NULL
+      GROUP BY ea.area, q.type
+    `).all();
+
+    // 영역별·세부영역별 정답률
+    const bySubArea = this.db.prepare(`
+      SELECT area, sub_area,
+        COUNT(*) as total,
+        SUM(is_correct) as correct,
+        ROUND(SUM(is_correct) * 100.0 / COUNT(*), 1) as accuracy
+      FROM exam_answers
+      WHERE sub_area IS NOT NULL AND sub_area != ''
+      GROUP BY area, sub_area
+    `).all();
+
+    // 영역별 종합
+    const areaSummary = this.db.prepare(`
+      SELECT area,
+        COUNT(*) as total,
+        SUM(is_correct) as correct,
+        ROUND(SUM(is_correct) * 100.0 / COUNT(*), 1) as accuracy
+      FROM exam_answers
+      GROUP BY area
+      ORDER BY accuracy ASC
+    `).all();
+
+    // 최근 추이 (마지막 5회)
+    const recentTrend = this.db.prepare(`
+      SELECT es.exam_id, es.score, es.started_at,
+        ea.area,
+        COUNT(*) as total,
+        SUM(ea.is_correct) as correct
+      FROM exam_sessions es
+      JOIN exam_answers ea ON es.exam_id = ea.exam_id
+      WHERE es.completed_at IS NOT NULL
+      GROUP BY es.exam_id, ea.area
+      ORDER BY es.started_at DESC
+    `).all();
+
+    return { byArea, byAreaType, bySubArea, areaSummary, recentTrend };
   }
 
   // ═══════════════════════════════════════

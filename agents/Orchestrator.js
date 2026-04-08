@@ -55,6 +55,9 @@ class Orchestrator {
 
     try {
       this.db.createExamSession(examData.examId, options.level || 'mixed', examData.safeQuestions.length);
+      // 출제 이력 기록 (중복 방지용)
+      const questionIds = examData.questions.map(q => q.id);
+      this.db.logExamQuestions(examData.examId, questionIds);
       this._emit('info', `시험 세션 DB 저장: ${examData.examId}`);
     } catch (e) {
       this._emit('warn', `DB 세션 저장 실패: ${e.message}`);
@@ -246,6 +249,11 @@ class Orchestrator {
   /** 문제 통계 */
   getQuestionStats() {
     return this.db.getQuestionStats();
+  }
+
+  /** 역량 진단 매트릭스 */
+  getCompetencyMatrix() {
+    return this.db.getCompetencyMatrix();
   }
 
   /** 기업 프리셋 목록 */

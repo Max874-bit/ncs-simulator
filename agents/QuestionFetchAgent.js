@@ -3,15 +3,20 @@
  *  Agent 1: QuestionFetchAgent (문제 수집 에이전트)
  * ═══════════════════════════════════════════════════
  *
- *  역할: 문제은행 + 공공데이터 API에서 문제를 수집/필터링/셔플
- *  입력: { level, questionCount, areas }
- *  출력: { examId, questions[], totalTime }
+ *  역할: 문제은행 + 동적 생성으로 매번 새로운 문제를 공급
+ *
+ *  중복 방지 전략:
+ *  1. DB에서 최근 N회 기출 문제 ID 조회
+ *  2. 정적 은행에서 미출제 문제 우선 선별
+ *  3. 정적 은행 소진 시 QuestionGenerator로 동적 생성
+ *  4. 영역별 균등 배분 + 난이도 분포 유지
  */
 
 const { QUESTIONS } = require('../data/questions');
 const { NcsDatabase } = require('../data/database');
+const { QuestionGenerator } = require('./QuestionGenerator');
 
-// 공공데이터 API 설정 (API키 등록 후 사용)
+// 공공데이터 API 설정
 const API_SOURCES = {
   ncsJobBase: {
     name: 'NCS 직업기초능력 API',
@@ -63,15 +68,17 @@ class QuestionFetchAgent {
     this.status = 'idle';
     this.log = [];
     this.db = db || new NcsDatabase();
+    this.generator = new QuestionGenerator();
   }
 
   /**
-   * 로컬 문제은행에서 문제를 수집한다 (DB 우선, 폴백: in-memory)
+   * ═══ 핵심: 스마트 문제 수집 (중복 방지 + 동적 생성) ═══
    */
   fetchFromLocalBank(options = {}) {
     const { level, questionCount = 20, areas } = options;
-    this._emit('info', `문제은행에서 조건에 맞는 문제 수집 시작 (level=${level || '전체'}, count=${questionCount})`);
+    this._emit('info', `스마트 문제 수집 시작 (level=${level || '전체'}, count=${questionCount})`);
 
+    // Step 1: 전체 풀 로드 (DB 우선)
     let pool;
     try {
       pool = this.db.getQuestions({ level, areas });
@@ -81,44 +88,80 @@ class QuestionFetchAgent {
       pool = [...QUESTIONS];
     }
 
-    // 난이도 필터 ('mixed'는 전체 포함)
+    // 난이도 필터
     if (level && level !== 'mixed') {
       pool = pool.filter(q => q.level === level);
-      this._emit('info', `난이도 '${level}' 필터 → ${pool.length}문제`);
     }
-
     // 영역 필터
     if (areas && areas.length > 0) {
       pool = pool.filter(q => areas.includes(q.area));
-      this._emit('info', `영역 필터 [${areas.join(',')}] → ${pool.length}문제`);
     }
 
-    // 영역별 균등 배분
+    // Step 2: 기출 이력 조회 → 미출제 문제 우선
+    let recentIds = [];
+    try {
+      recentIds = this.db.getRecentQuestionIds(5);
+      this._emit('info', `최근 5회 기출 ${recentIds.length}문제 확인`);
+    } catch (e) {
+      this._emit('warn', `기출 이력 조회 실패: ${e.message}`);
+    }
+
+    const unseenPool = pool.filter(q => !recentIds.includes(q.id));
+    const seenPool = pool.filter(q => recentIds.includes(q.id));
+    this._emit('info', `미출제: ${unseenPool.length}, 기출: ${seenPool.length}`);
+
+    // Step 3: 영역별 균등 배분 (미출제 우선)
     const availableAreas = [...new Set(pool.map(q => q.area))];
     const perArea = Math.ceil(questionCount / availableAreas.length);
 
     let selected = [];
+    let needGenerate = 0;
+
     for (const area of availableAreas) {
-      const areaQ = pool.filter(q => q.area === area);
-      this._shuffle(areaQ);
-      selected.push(...areaQ.slice(0, perArea));
+      const unseenArea = unseenPool.filter(q => q.area === area);
+      const seenArea = seenPool.filter(q => q.area === area);
+
+      this._shuffle(unseenArea);
+      this._shuffle(seenArea);
+
+      // 미출제 먼저, 부족하면 기출에서 보충
+      const areaSelected = [
+        ...unseenArea.slice(0, perArea),
+        ...seenArea.slice(0, Math.max(0, perArea - unseenArea.length))
+      ].slice(0, perArea);
+
+      selected.push(...areaSelected);
+
+      // 영역 문제가 부족하면 동적 생성 필요
+      if (areaSelected.length < perArea) {
+        needGenerate += perArea - areaSelected.length;
+      }
     }
 
+    // Step 4: 부족분은 QuestionGenerator로 동적 생성
+    if (selected.length < questionCount) {
+      const deficit = questionCount - selected.length;
+      this._emit('info', `정적 은행 부족 → ${deficit}문제 동적 생성`);
+      const generated = this.generator.generate(deficit, { areas, level });
+      selected.push(...generated);
+    }
+
+    // Step 5: 최종 셔플 & 트림
     this._shuffle(selected);
     selected = selected.slice(0, questionCount);
 
-    const totalTime = selected.reduce((sum, q) => sum + q.timeLimit, 0);
+    const totalTime = selected.reduce((sum, q) => sum + (q.timeLimit || 90), 0);
     const examId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
-    this._emit('success', `문제 수집 완료: ${selected.length}문제, 총 시간 ${totalTime}초`);
+    const staticCount = selected.filter(q => !q.id.startsWith('gen-')).length;
+    const genCount = selected.filter(q => q.id.startsWith('gen-')).length;
+    this._emit('success', `문제 수집 완료: ${selected.length}문제 (정적 ${staticCount} + 동적 ${genCount}), 총 시간 ${totalTime}초`);
 
     return {
       examId,
       totalTime,
       questions: selected,
-      // 클라이언트용 (정답 제외)
       safeQuestions: selected.map(({ answer, explanation, ...rest }) => rest),
-      // 채점용 (정답 포함)
       answerKey: selected.map(q => ({
         id: q.id,
         answer: q.answer,
@@ -126,29 +169,24 @@ class QuestionFetchAgent {
         area: q.area,
         subArea: q.subArea,
         level: q.level,
-        keywords: q.keywords
+        keywords: q.keywords || []
       }))
     };
   }
 
   /**
-   * 공공데이터 API에서 NCS 정보 조회 (API 키 필요)
+   * 공공데이터 API에서 NCS 정보 조회
    */
   async fetchFromPublicAPI(apiKey, options = {}) {
     this._emit('info', '공공데이터 API 연결 시도...');
-
     if (!apiKey) {
-      this._emit('warn', 'API 키가 없습니다. data.go.kr에서 활용신청 후 사용하세요.');
+      this._emit('warn', 'API 키가 없습니다.');
       return { success: false, message: 'API 키 필요' };
     }
-
     try {
       const url = `${API_SOURCES.ncsJobBase.endpoint}?serviceKey=${encodeURIComponent(apiKey)}&pageNo=1&numOfRows=10&dataType=JSON`;
-
-      // Node.js 18+ 내장 fetch 사용
       const response = await fetch(url);
       const data = await response.json();
-
       this._emit('success', `공공 API 데이터 수신: ${JSON.stringify(data).length} bytes`);
       return { success: true, data };
     } catch (err) {
@@ -158,7 +196,7 @@ class QuestionFetchAgent {
   }
 
   /**
-   * 약점 기반 보강 문제 수집
+   * 약점 기반 보강 문제 수집 (정적 + 동적)
    */
   fetchReinforcementQuestions(weakAreas, weakKeywords, currentLevel) {
     this._emit('info', `보강 문제 수집: 약점 영역 [${weakAreas.join(',')}]`);
@@ -168,22 +206,25 @@ class QuestionFetchAgent {
       (q.keywords && q.keywords.some(k => weakKeywords.includes(k)))
     );
 
-    // 현재 레벨과 한 단계 아래
     const levels = ['beginner', 'intermediate', 'advanced'];
     const idx = levels.indexOf(currentLevel);
     const targetLevels = idx > 0 ? [levels[idx - 1], currentLevel] : [currentLevel];
-
     pool = pool.filter(q => targetLevels.includes(q.level));
     this._shuffle(pool);
 
+    // 정적 부족 시 동적 생성 추가
+    if (pool.length < 10) {
+      const generated = this.generator.generate(10 - pool.length, { areas: weakAreas, level: currentLevel });
+      pool.push(...generated);
+    }
+
     const result = pool.slice(0, 10);
     this._emit('success', `보강 문제 ${result.length}개 수집 완료`);
-
     return result.map(({ answer, explanation, ...rest }) => rest);
   }
 
   /**
-   * API 소스 목록 반환
+   * API 소스 목록
    */
   getApiSources() {
     return Object.values(API_SOURCES).map(s => ({
@@ -203,8 +244,7 @@ class QuestionFetchAgent {
   }
 
   _emit(level, message) {
-    const entry = { agent: this.name, level, message, timestamp: new Date().toISOString() };
-    this.log.push(entry);
+    this.log.push({ agent: this.name, level, message, timestamp: new Date().toISOString() });
   }
 
   getLog() { return this.log; }
