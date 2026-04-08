@@ -53,6 +53,125 @@
     }
 
     /* ═══════════════════════════════════════
+       APP-LIKE ANIMATIONS
+       ═══════════════════════════════════════ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-30px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.9); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59,93,231,0.3); }
+      50% { box-shadow: 0 0 0 8px rgba(59,93,231,0); }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    /* 화면 전환 */
+    [id^="screen-"] { animation: fadeIn 0.3s ease-out; }
+    [id^="screen-"]:not(.hidden) { animation: fadeInUp 0.35s ease-out; }
+
+    /* 카드 등장 */
+    .card, .feature-card, .api-item, .history-item, .q-card {
+      animation: fadeInUp 0.4s ease-out both;
+    }
+    .features-grid .card:nth-child(1) { animation-delay: 0.05s; }
+    .features-grid .card:nth-child(2) { animation-delay: 0.1s; }
+    .features-grid .card:nth-child(3) { animation-delay: 0.15s; }
+
+    /* 버튼 인터랙션 */
+    .btn {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn:active {
+      transform: scale(0.96) !important;
+    }
+
+    /* 선택지 인터랙션 */
+    .choices li {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .choices li:active {
+      transform: scale(0.98);
+    }
+    .choices li.selected {
+      animation: scaleIn 0.2s ease-out;
+    }
+
+    /* 점수 링 */
+    .score-ring {
+      animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 시험 진행바 */
+    .progress-track .fill {
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* 타이머 위험 시 펄스 */
+    .timer-box.danger {
+      animation: pulseGlow 1s infinite;
+    }
+
+    /* 문제 전환 */
+    .q-card { animation: slideInRight 0.3s ease-out; }
+
+    /* 결과 영역바 */
+    .afill {
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* 네비게이션 바 */
+    .navbar {
+      transition: box-shadow 0.3s;
+    }
+
+    /* 문제맵 도트 */
+    .qd {
+      transition: all 0.2s ease;
+    }
+    .qd:hover {
+      transform: scale(1.15);
+    }
+    .qd.current {
+      animation: pulseGlow 2s infinite;
+    }
+
+    /* 로딩 스피너 */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-spinner {
+      width: 32px; height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 20px auto;
+    }
+
+    /* 합격/불합격 뱃지 */
+    .pass-pill {
+      transition: all 0.3s ease;
+    }
+
+    /* ═══════════════════════════════════════
        NAVBAR
        ═══════════════════════════════════════ */
     .navbar {
@@ -1041,15 +1160,20 @@
 
     <!-- AREAS -->
     <div class="section" id="section-areas">
-      <h2 class="section-title">출제 영역 (일반행정)</h2>
-      <p class="section-subtitle">NCS 직업기초능력 6개 영역을 균등 배분하여 출제합니다</p>
+      <h2 class="section-title">출제 영역</h2>
+      <p class="section-subtitle">NCS 직업기초능력 10개 영역 + 직무수행능력평가</p>
       <div class="area-chips" style="justify-content:center">
-        <span class="area-chip main"><i class="fas fa-comments"></i> 의사소통능력 30~35%</span>
-        <span class="area-chip main"><i class="fas fa-calculator"></i> 수리능력 30~35%</span>
-        <span class="area-chip main"><i class="fas fa-lightbulb"></i> 문제해결능력 20~25%</span>
+        <span class="area-chip main"><i class="fas fa-comments"></i> 의사소통능력</span>
+        <span class="area-chip main"><i class="fas fa-calculator"></i> 수리능력</span>
+        <span class="area-chip main"><i class="fas fa-lightbulb"></i> 문제해결능력</span>
         <span class="area-chip sub"><i class="fas fa-clock"></i> 자원관리능력</span>
         <span class="area-chip sub"><i class="fas fa-database"></i> 정보능력</span>
         <span class="area-chip sub"><i class="fas fa-sitemap"></i> 조직이해능력</span>
+        <span class="area-chip sub"><i class="fas fa-user-cog"></i> 자기개발능력</span>
+        <span class="area-chip sub"><i class="fas fa-users"></i> 대인관계능력</span>
+        <span class="area-chip sub"><i class="fas fa-tools"></i> 기술능력</span>
+        <span class="area-chip sub"><i class="fas fa-balance-scale"></i> 직업윤리</span>
+        <span class="area-chip main" style="background:#fff4de;color:#e09200;border-color:#f5a623"><i class="fas fa-briefcase"></i> 직무수행능력 (일반행정)</span>
       </div>
     </div>
 
