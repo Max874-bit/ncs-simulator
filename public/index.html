@@ -1904,12 +1904,15 @@ function renderQuestion() {
     </div>`;
 
   const btnNext = document.getElementById('btn-next');
+  const btnSubmitMobile = document.getElementById('btn-submit-mobile');
   if (idx === examState.questions.length - 1) {
     btnNext.innerHTML = '<i class="fas fa-paper-plane"></i> 제출';
     btnNext.onclick = submitExam;
+    if (btnSubmitMobile) btnSubmitMobile.style.display = 'inline-flex';
   } else {
     btnNext.innerHTML = '다음 <i class="fas fa-arrow-right"></i>';
     btnNext.onclick = nextQuestion;
+    if (btnSubmitMobile) btnSubmitMobile.style.display = 'none';
   }
   renderQMap();
 }
@@ -1930,21 +1933,42 @@ function goToQuestion(i) { examState.currentIndex = i; renderQuestion(); }
 // ─── Submit ───
 async function submitExam() {
   const un = examState.answers.filter(a => a === -1).length;
-  if (un > 0) { if (!confirm(`아직 ${un}문제 미풀이. 제출?`)) return; }
+  if (un > 0) { if (!confirm(`아직 ${un}문제를 풀지 않았습니다. 제출하시겠습니까?`)) return; }
   else { if (!confirm('답안을 제출하시겠습니까?')) return; }
+
+  // 로딩 표시
+  const btns = document.querySelectorAll('[onclick="submitExam()"]');
+  btns.forEach(b => { b.disabled = true; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 채점 중...'; });
 
   clearInterval(examState.timerInterval);
   const timeSpent = Math.floor((Date.now() - examState.startTime) / 1000);
 
-  const res = await fetch(apiUrl('/api/exam/submit'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ examId: examState.examId, answers: examState.answers, timeSpent })
-  });
-  const result = await res.json();
-  examState.result = result;
-  renderResult(result);
-  showScreen('result');
+  try {
+    const res = await fetch(apiUrl('/api/exam/submit'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ examId: examState.examId, answers: examState.answers, timeSpent })
+    });
+
+    if (!res.ok) {
+      throw new Error(`서버 오류 (${res.status})`);
+    }
+
+    const result = await res.json();
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    examState.result = result;
+    renderResult(result);
+    showScreen('result');
+  } catch (err) {
+    console.error('제출 오류:', err);
+    alert('답안 제출 중 오류가 발생했습니다.\n' + err.message + '\n\n다시 시도해주세요.');
+    // 버튼 복원
+    btns.forEach(b => { b.disabled = false; b.innerHTML = '<i class="fas fa-paper-plane"></i> 답안 제출하기'; });
+  }
 }
 
 // ─── Result ───
