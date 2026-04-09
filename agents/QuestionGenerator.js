@@ -284,6 +284,26 @@ class QuestionGenerator {
     return { name: '출장 관리 규정', dept: '총무과' };
   }
 
+  /** 기관명 + 한국어 조사 치환: {ORG}이(가), {ORG}은(는), {ORG}에서 등 */
+  _replaceOrg(text) {
+    const name = this._orgName();
+    const last = name[name.length - 1];
+    const code = last.charCodeAt(0);
+    const hasBatchim = (code >= 0xAC00 && code <= 0xD7A3) ? (code - 0xAC00) % 28 !== 0 : true;
+    return text
+      .replace(/\{ORG\}이\(가\)/g, name + (hasBatchim ? '이' : '가'))
+      .replace(/\{ORG\}은\(는\)/g, name + (hasBatchim ? '은' : '는'))
+      .replace(/\{ORG\}을\(를\)/g, name + (hasBatchim ? '을' : '를'))
+      .replace(/\{ORG\}/g, name);
+  }
+
+  /** 기관별 윤리 맥락 */
+  _orgEthicsContext() {
+    const c = this._getProfile();
+    if (c && c.ethicsContext) return c.ethicsContext;
+    return '공공성과 청렴성, 국민에 대한 책임';
+  }
+
   /** 기관 프로필 조회 */
   _getProfile() {
     if (!this.context || !this.context.companyName) return null;
@@ -396,8 +416,10 @@ class QuestionGenerator {
         const qt = qTypes[this._rand(0, qTypes.length - 1)];
         const correctDept = qt.finder();
 
+        const maxDeptLen = Math.max(...data.map(d => d.dept.length), 4);
+        const deptPad = maxDeptLen + 2;
         const table = data.map(d =>
-          `│ ${d.dept.padEnd(6)}│${String(d.budget).padStart(7)}│${String(d.exec).padStart(7)}│${String(d.remain).padStart(7)}│`
+          `│ ${d.dept.padEnd(deptPad)}│${String(d.budget).padStart(7)}│${String(d.exec).padStart(7)}│${String(d.remain).padStart(7)}│`
         ).join('\n');
 
         const choices = this._shuffle([...selected]);
@@ -405,7 +427,7 @@ class QuestionGenerator {
 
         return {
           area: '수리능력', subArea: '예산분석', level, type: 'PSAT형', timeLimit: level === 'advanced' ? 150 : 100,
-          question: `다음은 ${this._orgName()}의 부서별 예산 현황이다. (단위: 만원)\n\n┌────────┬───────┬───────┬───────┐\n│  부서  │배정액 │집행액 │ 잔액  │\n├────────┼───────┼───────┼───────┤\n${table}\n├────────┼───────┼───────┼───────┤\n│  합계  │${String(totalBudget).padStart(7)}│${String(totalExec).padStart(7)}│${String(totalBudget - totalExec).padStart(7)}│\n└────────┴───────┴───────┴───────┘\n\n${qt.label} 부서는?`,
+          question: `다음은 ${this._orgName()}의 부서별 예산 현황이다. (단위: 만원)\n\n┌${'─'.repeat(deptPad + 2)}┬───────┬───────┬───────┐\n│${'부서'.padStart(Math.ceil((deptPad + 2) / 2) + 1).padEnd(deptPad + 2)}│배정액 │집행액 │ 잔액  │\n├${'─'.repeat(deptPad + 2)}┼───────┼───────┼───────┤\n${table}\n├${'─'.repeat(deptPad + 2)}┼───────┼───────┼───────┤\n│${'합계'.padStart(Math.ceil((deptPad + 2) / 2) + 1).padEnd(deptPad + 2)}│${String(totalBudget).padStart(7)}│${String(totalExec).padStart(7)}│${String(totalBudget - totalExec).padStart(7)}│\n└${'─'.repeat(deptPad + 2)}┴───────┴───────┴───────┘\n\n${qt.label} 부서는?`,
           choices, answer,
           explanation: data.map(d => `${d.dept}: 집행률 ${(d.exec/d.budget*100).toFixed(1)}%, 잔액 ${d.remain}`).join(', '),
           keywords: ['예산집행률', '자료해석', '대형표']
@@ -429,7 +451,10 @@ class QuestionGenerator {
 
         const g1 = ((vals[1] - vals[0]) / vals[0] * 100).toFixed(1);
         const g2 = ((vals[2] - vals[1]) / vals[1] * 100).toFixed(1);
-        const bigger = parseFloat(g1) > parseFloat(g2);
+        // 동점 방지: g1 === g2이면 vals[2]를 조정
+        if (g1 === g2) vals[2] += this._rand(1, 3) * (Math.random() > 0.5 ? 1 : -1);
+        const g2Final = ((vals[2] - vals[1]) / vals[1] * 100).toFixed(1);
+        const bigger = parseFloat(g1) > parseFloat(g2Final);
 
         const correctStatement = bigger
           ? `${years[1]}년의 전년대비 증가율이 ${years[2]}년보다 높다.`
@@ -439,7 +464,7 @@ class QuestionGenerator {
           `${years[0]}년부터 ${years[2]}년까지 매년 감소하였다.`,
           `${years[2]}년 ${ctx.item}은 ${years[0]}년의 3배 이상이다.`,
           `연평균 증가율은 50%를 초과한다.`,
-          `${years[1]}년과 ${years[2]}년의 증가율 차이는 ${(Math.abs(parseFloat(g1) - parseFloat(g2)) + 10).toFixed(1)}%p이다.`
+          `${years[1]}년과 ${years[2]}년의 증가율 차이는 ${(Math.abs(parseFloat(g1) - parseFloat(g2Final)) + 10).toFixed(1)}%p이다.`
         ];
         this._shuffle(wrongStatements);
         const choices = [correctStatement, ...wrongStatements.slice(0, 3)];
@@ -449,7 +474,7 @@ class QuestionGenerator {
           area: '수리능력', subArea: '증감률분석', level, type: 'PSAT형', timeLimit: 120,
           question: `다음은 ${ctx.org}의 연도별 ${ctx.item} 현황이다. (단위: ${ctx.unit})\n\n${years[0]}년: ${vals[0]} → ${years[1]}년: ${vals[1]} → ${years[2]}년: ${vals[2]}\n\n다음 중 옳은 것은?`,
           choices, answer: choices.indexOf(correctStatement),
-          explanation: `${years[1]}년 증가율: ${g1}%, ${years[2]}년 증가율: ${g2}%.`,
+          explanation: `${years[1]}년 증가율: ${g1}%, ${years[2]}년 증가율: ${g2Final}%. ${bigger ? years[1] + '년' : years[2] + '년'}의 증가율이 더 높다.`,
           keywords: ['증감률', '전년대비', '자료해석']
         };
       }
@@ -468,7 +493,7 @@ class QuestionGenerator {
 
         const correctChoice = `${categories[maxIdx]}의 비중이 가장 크다.`;
         const wrongs = [
-          `${categories[(maxIdx + 1) % 5]}의 비중이 ${(parseFloat(proportions[(maxIdx + 1) % 5]) + 15).toFixed(1)}%이다.`,
+          `${categories[(maxIdx + 1) % categories.length]}의 비중이 ${(parseFloat(proportions[(maxIdx + 1) % categories.length]) + 15).toFixed(1)}%이다.`,
           `전체 합계는 ${total + this._rand(100, 500)}만원이다.`,
           `가장 작은 항목의 비중은 ${(Math.min(...proportions.map(Number)) + 10).toFixed(1)}%이다.`
         ];
@@ -585,7 +610,7 @@ class QuestionGenerator {
             const wrongs = [
               `출장 ${days - 1}일 전에 제출해도 유효하다.`,
               `출장보고서는 종료 후 ${reportDays + 5}일까지 제출하면 된다.`,
-              `${(amount / 2)}원의 출장비도 ${approver} 승인이 필요하다.`
+              `${(amount / 2 / 10000)}만원의 출장비도 ${approver} 승인이 필요하다.`
             ];
             const choices = [correct, ...wrongs]; this._shuffle(choices);
             return {
@@ -658,7 +683,11 @@ class QuestionGenerator {
             const exception = ['수습직원', '휴직자', '파견직원', '육아휴직자'][this._rand(0, 3)];
             const penalty = ['인사고과 반영', '복리후생 차감', '시말서 제출', '추가교육 이수'][this._rand(0, 3)];
 
-            const particle = /[로러루르을릴률]$/.test(exception) ? '은' : /[가나다라마바사아자차카타파하]$/.test(exception) ? '는' : '은(는)';
+            // 받침(종성) 유무로 조사 결정: 한글 유니코드 (code - 0xAC00) % 28 !== 0 이면 받침 있음
+            const lastChar = exception[exception.length - 1];
+            const code = lastChar.charCodeAt(0);
+            const hasBatchim = (code >= 0xAC00 && code <= 0xD7A3) ? (code - 0xAC00) % 28 !== 0 : true;
+            const particle = hasBatchim ? '은' : '는';
             const correct = `${exception}${particle} 이번 ${event} 대상에서 제외된다.`;
             const wrongs = [
               `${event} 이수 기간은 ${month}월 ${endDay + 5}일까지이다.`,
@@ -753,11 +782,7 @@ class QuestionGenerator {
         this._shuffle(s.statements);
         const picked = s.statements.slice(0, 4);
         const labels = ['ㄱ', 'ㄴ', 'ㄷ', 'ㄹ'];
-        const correctLabels = picked.filter(st => st.correct).map((_, i) => {
-          const idx = picked.indexOf(picked.filter(st => st.correct)[i]);
-          return labels[idx];
-        });
-        // Recalculate correctly
+        // 정답 라벨 계산
         const correctOnes = [];
         picked.forEach((st, i) => { if (st.correct) correctOnes.push(labels[i]); });
 
@@ -783,28 +808,34 @@ class QuestionGenerator {
   // ════════════════════════════════════════
 
   _probSolvingTemplates() {
-    return ['intermediate', 'advanced'].map(level => ({
+    return ['beginner', 'intermediate', 'advanced'].map(level => ({
       area: '문제해결능력', areaCode: 'prob', level,
       generator: () => {
         const scenarios = [
           { situation: '민원처리 지연', criteria: ['긴급도', '영향범위', '해결가능성', '비용'],
             correct: '긴급도와 영향범위를 우선 고려하여 다수에게 영향을 미치는 민원부터 처리한다.',
-            wrongs: ['접수 순서를 기준으로 선입선출 방식으로 순차 처리한다.', '비용 효율이 가장 높은 민원을 선별하여 우선 처리한다.', '해결 난이도가 낮은 민원부터 처리하여 처리 건수를 높인다.'] },
+            wrongs: ['접수 순서를 기준으로 선입선출 방식을 적용하여 공정하게 순차 처리한다.', '비용 대비 효율이 가장 높은 민원을 선별하여 제한된 자원 내에서 처리한다.', '해결 난이도가 낮은 민원부터 신속히 처리하여 전체 처리 건수를 높인다.'],
+            explain: '민원처리 지연 시 긴급도와 영향범위를 함께 고려해야 한다. 다수에게 영향을 미치는 긴급 민원을 우선 처리하는 것이 합리적이다. 접수 순서(선입선출)는 긴급도를 반영하지 못하고, 비용 효율이나 난이도 기준은 피해 확산을 방치할 수 있다.' },
           { situation: '시스템 장애 발생', criteria: ['복구시간', '사용자수', '대체수단', '데이터손실위험'],
             correct: '사용자수와 데이터손실위험을 기준으로 우선순위를 정해 복구한다.',
-            wrongs: ['가용 인력을 모든 시스템에 균등 배분하여 동시에 복구한다.', '복구 소요시간이 짧은 시스템부터 처리하여 가용률을 높인다.', '대체수단이 확보된 시스템은 별도 기한 없이 보류 처리한다.'] },
+            wrongs: ['가용 인력을 모든 시스템에 균등 배분하여 동시에 복구한다.', '복구 소요시간이 짧은 시스템부터 처리하여 가용률을 높인다.', '대체수단이 확보된 시스템은 별도 기한 없이 보류 처리한다.'],
+            explain: '시스템 장애 시 사용자수(영향 범위)와 데이터손실위험(비가역적 피해)을 기준으로 우선순위를 결정해야 한다. 인력 균등 배분은 핵심 시스템 복구를 지연시키고, 소요시간 기준은 중요도를 무시하며, 대체수단 보유 시스템 보류는 기한 없는 방치로 이어질 수 있다.' },
           { situation: '예산 삭감 대응', criteria: ['필수도', '법적의무', '성과기여도', '이해관계자영향'],
             correct: '법적 의무 사업은 유지하고, 성과기여도가 낮은 사업부터 조정한다.',
-            wrongs: ['모든 사업의 예산을 동일 비율로 일괄 삭감하여 형평성을 유지한다.', '인건비 비중이 가장 큰 부서의 예산을 최우선으로 삭감한다.', '성과기여도가 높은 사업을 삭감하여 부서 간 균형을 맞춘다.'] },
+            wrongs: ['모든 사업의 예산을 동일 비율로 일괄 삭감하여 형평성을 유지한다.', '인건비 비중이 가장 큰 부서의 예산을 최우선으로 삭감한다.', '성과기여도가 높은 사업을 삭감하여 부서 간 균형을 맞춘다.'],
+            explain: '예산 삭감 시 법적 의무 사업은 삭감 대상에서 제외해야 하며, 성과기여도가 낮은 사업부터 조정하는 것이 합리적이다. 일괄 삭감은 필수 사업까지 위축시키고, 인건비 기준 삭감은 인력 운영에 혼란을 초래하며, 성과 높은 사업 삭감은 기관 역량을 약화시킨다.' },
           { situation: '고객 불만 급증', criteria: ['불만원인', '재발가능성', '브랜드영향', '대응비용'],
             correct: '불만 원인 분석 후 재발 가능성과 브랜드 영향이 큰 문제부터 해결한다.',
-            wrongs: ['불만 접수 고객 전원에게 동일한 금액의 보상금을 일괄 지급한다.', '불만 건수가 적은 유형부터 처리하여 미처리 유형 수를 줄인다.', '과거 사례를 참고하여 불만이 자연 감소할 때까지 추이를 관망한다.'] },
+            wrongs: ['불만 접수 고객 전원에게 동일한 금액의 보상금을 일괄 지급한다.', '불만 건수가 적은 유형부터 처리하여 미처리 유형 수를 줄인다.', '과거 사례를 참고하여 불만이 자연 감소할 때까지 추이를 관망한다.'],
+            explain: '고객 불만 급증 시 원인을 분석한 뒤 재발 가능성과 브랜드 영향이 큰 문제부터 해결해야 한다. 일괄 보상금은 근본 원인을 해결하지 못하고, 건수 적은 유형 우선 처리는 핵심 문제를 방치하며, 추이 관망은 불만이 확대될 위험이 있다.' },
           { situation: '인력 부족 상황', criteria: ['업무긴급도', '전문성요구', '외주가능성', '법정기한'],
             correct: '법정기한 업무를 최우선 배정하고 외주 가능한 업무는 외부 위탁을 검토한다.',
-            wrongs: ['전 직원에게 초과근무를 지시하여 부족 인력을 보충한다.', '업무량을 개인별로 균등 분배하여 공평성을 최우선 확보한다.', '신규 직원 채용 절차가 완료될 때까지 비긴급 업무를 전면 보류한다.'] },
+            wrongs: ['전 직원에게 초과근무를 균등하게 지시하여 부족한 인력분을 보충한다.', '업무량을 개인별로 균등 분배하여 팀 내 공평성을 최우선으로 확보한다.', '신규 직원 채용 절차가 완료될 때까지 비긴급 업무는 전면 보류 처리한다.'],
+            explain: '인력 부족 시 법정기한이 있는 업무를 최우선 배정하고, 외주 가능한 업무는 위탁하여 핵심 인력을 집중 배치해야 한다. 전원 초과근무는 피로 누적과 업무 품질 저하를 유발하고, 균등 분배는 전문성을 무시하며, 전면 보류는 업무 지연을 심화시킨다.' },
           { situation: '정보 유출 사고', criteria: ['유출범위', '정보민감도', '법적책임', '이해관계자통보'],
             correct: '유출 경로를 즉시 차단하고 관련 법령에 따라 감독기관과 피해자에게 통보한다.',
-            wrongs: ['내부 조사를 완료한 뒤 그 결과를 바탕으로 감독기관에 보고한다.', '유출 사실의 외부 공개를 최소화하여 기관의 대외 이미지를 보호한다.', '법무팀의 법적 검토가 완료될 때까지 별도의 대응 조치를 보류한다.'] }
+            wrongs: ['내부 조사를 완료한 뒤 그 결과를 바탕으로 감독기관에 보고한다.', '유출 사실의 외부 공개를 최소화하여 기관의 대외 이미지를 보호한다.', '법무팀의 법적 검토가 완료될 때까지 별도의 대응 조치를 보류한다.'],
+            explain: '정보 유출 사고 시 유출 경로를 즉시 차단하여 추가 피해를 방지하고, 개인정보 보호법 등에 따라 감독기관과 피해자에게 신속히 통보해야 한다. 내부 조사 완료 후 보고는 법정 통보 기한을 위반할 수 있고, 이미지 보호를 위한 은폐나 법적 검토 대기 중 보류는 법적 책임을 가중시킨다.' }
         ];
         const s = scenarios[this._rand(0, scenarios.length - 1)];
         const choices = [s.correct, ...s.wrongs]; this._shuffle(choices);
@@ -812,7 +843,7 @@ class QuestionGenerator {
           area: '문제해결능력', subArea: '우선순위결정', level, type: 'PSAT형', timeLimit: 100,
           question: `${this._orgName()}에서 '${s.situation}' 상황이 발생하였다. 고려 기준: ${s.criteria.join(', ')}.\n\n가장 적절한 대응 방안은?`,
           choices, answer: choices.indexOf(s.correct),
-          explanation: `${s.criteria[0]}와 ${s.criteria[1]}을 우선 고려하는 것이 합리적.`,
+          explanation: s.explain,
           keywords: ['우선순위', '의사결정', '상황판단']
         };
       }
@@ -1000,50 +1031,64 @@ class QuestionGenerator {
           beginner: [
             { q: '다음 중 컴퓨터 바이러스 감염을 예방하는 방법으로 가장 적절한 것은?',
               correct: '출처가 불분명한 이메일의 첨부파일을 열지 않는다.',
-              wrongs: ['업무용 PC와 개인용 PC를 같은 네트워크에 연결한다.', '보안 업데이트는 업무에 지장이 없을 때만 설치한다.', '자주 쓰는 프로그램은 편의를 위해 관리자 권한으로 실행한다.'], sub: '정보보안' },
+              wrongs: ['업무용 PC와 개인용 PC를 같은 네트워크에 연결한다.', '보안 업데이트는 업무에 지장이 없을 때만 설치한다.', '자주 쓰는 프로그램은 편의를 위해 관리자 권한으로 실행한다.'], sub: '정보보안',
+              explain: '바이러스는 주로 이메일 첨부파일, USB 등을 통해 유입된다. 출처 불분명한 첨부파일을 열지 않는 것이 기본 예방 수칙이다. 같은 네트워크 연결, 업데이트 지연, 관리자 권한 실행은 오히려 감염 위험을 높인다.' },
             { q: '개인정보보호법에 따른 개인정보에 해당하지 않는 것은?',
               correct: '법인의 사업자등록번호',
-              wrongs: ['주민등록번호', '휴대전화번호', '이메일 주소'], sub: '정보보안' },
+              wrongs: ['주민등록번호', '휴대전화번호', '이메일 주소'], sub: '정보보안',
+              explain: '개인정보보호법상 개인정보는 "살아 있는 개인"에 관한 정보이다. 법인(회사)의 사업자등록번호는 법인에 관한 정보이므로 개인정보에 해당하지 않는다. 주민등록번호, 휴대전화번호, 이메일 주소는 모두 개인을 식별할 수 있는 정보이다.' },
             { q: '다음 중 피싱(Phishing) 공격의 특징으로 옳은 것은?',
               correct: '정상적인 기관을 사칭하여 개인정보를 탈취하려는 시도이다.',
-              wrongs: ['컴퓨터의 처리 속도를 저하시키는 공격이다.', '물리적으로 서버를 파괴하는 행위이다.', '네트워크 대역폭을 점유하는 공격이다.'], sub: '정보보안' },
+              wrongs: ['컴퓨터의 처리 속도를 저하시키는 공격이다.', '물리적으로 서버를 파괴하는 행위이다.', '네트워크 대역폭을 점유하는 공격이다.'], sub: '정보보안',
+              explain: '피싱(Phishing)은 은행, 공공기관 등 신뢰할 수 있는 기관을 사칭하여 가짜 웹사이트나 이메일로 개인정보를 탈취하는 사회공학적 공격이다. 처리 속도 저하는 바이러스/웜, 물리적 파괴는 사이버 공격이 아니며, 대역폭 점유는 DDoS에 해당한다.' },
             { q: '스프레드시트에서 셀 범위 A1:A10의 합계를 구하는 함수는?',
               correct: 'SUM(A1:A10)',
-              wrongs: ['ADD(A1:A10)', 'TOTAL(A1:A10)', 'COUNT(A1:A10)'], sub: '컴퓨터활용' },
+              wrongs: ['ADD(A1:A10)', 'TOTAL(A1:A10)', 'COUNT(A1:A10)'], sub: '컴퓨터활용',
+              explain: 'SUM은 지정된 범위의 숫자를 모두 더하는 함수이다. ADD, TOTAL은 스프레드시트에 존재하지 않는 함수이며, COUNT는 숫자가 입력된 셀의 개수를 세는 함수로 합계와는 다르다.' },
             { q: '운영체제(OS)의 역할로 적절하지 않은 것은?',
               correct: '문서의 내용을 자동으로 번역한다.',
-              wrongs: ['하드웨어 자원을 관리한다.', '프로그램 실행 환경을 제공한다.', '파일 시스템을 관리한다.'], sub: '컴퓨터활용' }
+              wrongs: ['하드웨어 자원을 관리한다.', '프로그램 실행 환경을 제공한다.', '파일 시스템을 관리한다.'], sub: '컴퓨터활용',
+              explain: '운영체제는 하드웨어 자원 관리, 프로그램 실행 환경 제공, 파일 시스템 관리 등을 담당한다. 문서 번역은 응용 소프트웨어(번역 프로그램)의 기능이지 운영체제의 역할이 아니다.' }
           ],
           intermediate: [
             { q: 'SQL 인젝션 공격을 방지하는 방법으로 가장 적절한 것은?',
               correct: '매개변수화된 쿼리(Prepared Statement)를 사용한다.',
-              wrongs: ['비밀번호를 주기적으로 변경한다.', '방화벽을 설치한다.', 'HTTP 대신 FTP를 사용한다.'], sub: '정보보안' },
+              wrongs: ['비밀번호를 주기적으로 변경한다.', '방화벽을 설치한다.', 'HTTP 대신 FTP를 사용한다.'], sub: '정보보안',
+              explain: 'SQL 인젝션은 사용자 입력값에 악성 SQL 코드를 삽입하는 공격이다. Prepared Statement는 입력값을 SQL 구문과 분리하여 처리하므로 가장 효과적인 방어 수단이다. 비밀번호 변경이나 방화벽은 SQL 인젝션과 직접 관련이 없으며, FTP는 보안과 무관하다.' },
             { q: '다음 중 개인정보의 기술적 보호 조치로 적절하지 않은 것은?',
               correct: '개인정보를 평문으로 데이터베이스에 저장한다.',
-              wrongs: ['전송 시 SSL/TLS 암호화를 적용한다.', '접근 권한을 최소한으로 부여한다.', '접속 기록을 6개월 이상 보관한다.'], sub: '정보보안' },
+              wrongs: ['전송 시 SSL/TLS 암호화를 적용한다.', '접근 권한을 최소한으로 부여한다.', '접속 기록을 6개월 이상 보관한다.'], sub: '정보보안',
+              explain: '개인정보를 평문(암호화하지 않은 상태)으로 저장하면 데이터 유출 시 그대로 노출되므로 부적절하다. SSL/TLS 암호화, 최소 권한 부여, 접속 기록 보관은 모두 개인정보 보호법에서 요구하는 기술적 보호 조치에 해당한다.' },
             { q: 'VLOOKUP 함수의 설명으로 옳은 것은?',
               correct: '지정 범위의 첫 번째 열에서 값을 찾아 같은 행의 다른 열 값을 반환한다.',
-              wrongs: ['지정된 셀 범위에 포함된 모든 숫자의 합계를 계산하여 반환한다.', '주어진 조건을 만족하는 셀의 개수를 계산하여 정수로 반환한다.', '셀에 입력된 텍스트 문자열을 수치 데이터로 변환하여 반환한다.'], sub: '컴퓨터활용' },
+              wrongs: ['지정된 셀 범위에 포함된 모든 숫자의 합계를 계산하여 반환한다.', '주어진 조건을 만족하는 셀의 개수를 계산하여 정수로 반환한다.', '셀에 입력된 텍스트 문자열을 수치 데이터로 변환하여 반환한다.'], sub: '컴퓨터활용',
+              explain: 'VLOOKUP(Vertical Lookup)은 표의 첫 열에서 검색값을 찾고, 같은 행에서 지정한 열 번호의 값을 반환하는 함수이다. 합계 계산은 SUM, 조건별 개수는 COUNTIF, 텍스트→숫자 변환은 VALUE 함수의 기능이다.' },
             { q: '클라우드 컴퓨팅의 서비스 모델 중 IaaS에 해당하는 것은?',
               correct: '가상 서버, 스토리지, 네트워크 등 인프라를 제공하는 서비스',
-              wrongs: ['완성된 소프트웨어를 인터넷으로 제공하는 서비스', '개발 플랫폼과 도구를 제공하는 서비스', '데이터 분석 알고리즘만 제공하는 서비스'], sub: '정보기술' },
+              wrongs: ['완성된 소프트웨어를 인터넷으로 제공하는 서비스', '개발 플랫폼과 도구를 제공하는 서비스', '데이터 분석 알고리즘만 제공하는 서비스'], sub: '정보기술',
+              explain: 'IaaS(Infrastructure as a Service)는 가상 서버, 스토리지, 네트워크 등 IT 인프라를 서비스로 제공하는 모델이다. 완성 소프트웨어 제공은 SaaS, 개발 플랫폼 제공은 PaaS에 해당하며, 데이터 분석 알고리즘만 제공은 표준 클라우드 모델이 아니다.' },
             { q: '데이터베이스에서 정규화(Normalization)의 주된 목적은?',
               correct: '데이터 중복을 최소화하고 무결성을 유지한다.',
-              wrongs: ['데이터 검색 속도를 최대화한다.', '데이터베이스 용량을 줄인다.', '사용자 인터페이스를 개선한다.'], sub: '정보기술' }
+              wrongs: ['데이터 검색 속도를 최대화한다.', '데이터베이스 용량을 줄인다.', '사용자 인터페이스를 개선한다.'], sub: '정보기술',
+              explain: '정규화는 테이블 구조를 체계적으로 분리하여 데이터 중복을 최소화하고 삽입·삭제·갱신 이상 현상을 방지하는 과정이다. 검색 속도 향상은 인덱스 설계의 목적이고, 용량 절감이나 UI 개선은 정규화와 무관하다.' }
           ],
           advanced: [
-            { q: '랜섬웨어 감염 시 가장 우선해야 할 조치는?',
-              correct: '감염 시스템을 네트워크에서 즉시 분리한다.',
-              wrongs: ['해커에게 몸값을 지불한다.', '감염 파일을 직접 삭제한다.', '백신으로 전체 스캔을 실행한다.'], sub: '정보보안' },
-            { q: '제로데이(Zero-day) 취약점에 대한 설명으로 옳은 것은?',
-              correct: '소프트웨어 제조사가 아직 패치를 제공하지 못한 보안 취약점이다.',
-              wrongs: ['발견된 지 하루 이내에 패치되는 취약점이다.', '공격에 사용될 가능성이 0%인 취약점이다.', '네트워크 장비에서만 발견되는 취약점이다.'], sub: '정보보안' },
-            { q: 'DDoS 공격에 대한 설명으로 옳은 것은?',
-              correct: '다수의 시스템에서 동시에 트래픽을 전송하여 서비스를 마비시키는 공격이다.',
-              wrongs: ['한 대의 컴퓨터에서 비밀번호를 무차별 대입하는 공격이다.', '웹 페이지에 악성 스크립트를 삽입하는 공격이다.', '네트워크 패킷을 도청하는 공격이다.'], sub: '정보보안' },
-            { q: '블록체인 기술의 특성으로 옳지 않은 것은?',
-              correct: '중앙 관리 서버가 모든 거래를 승인하고 기록한다.',
-              wrongs: ['분산 원장 기술을 기반으로 한다.', '한번 기록된 데이터는 변경이 매우 어렵다.', '합의 알고리즘을 통해 거래를 검증한다.'], sub: '정보기술' }
+            { q: '기관 내 직원이 출처 불명의 이메일 첨부파일을 열었더니 파일이 암호화되고 복호화 비용을 요구하는 메시지가 표시되었다. 정보보안 담당자의 가장 적절한 초기 대응은?',
+              correct: '감염 시스템을 네트워크에서 즉시 분리하고, 보안 부서에 사고를 보고한 뒤 백업 데이터 확인에 착수한다.',
+              wrongs: ['비용을 지불하여 빠르게 복호화한 뒤, 이후 보안 점검을 실시한다.', '감염된 파일을 수동으로 삭제한 뒤, 백신 프로그램으로 전체 스캔을 진행한다.', '해당 PC에서 즉시 백신 전체 스캔을 실행하여 악성코드를 제거한다.'], sub: '정보보안',
+              explain: '랜섬웨어 감염 시 최우선 조치는 네트워크 분리로 추가 확산을 차단하는 것이다. 비용 지불은 추가 공격을 유발하며, 파일 수동 삭제는 복구 가능성을 없애고, 백신 스캔은 네트워크 분리 후 수행해야 한다.' },
+            { q: '보안팀이 웹 서버 로그에서 알 수 없는 IP로부터 수천 건의 동시 접속 시도를 확인했다. 서비스 응답 시간이 급격히 증가하고 있을 때, 이 공격 유형과 가장 적절한 대응은?',
+              correct: 'DDoS 공격으로 판단하고, 해당 IP 대역을 차단한 뒤 트래픽 분산 장비(CDN/WAF)를 활성화한다.',
+              wrongs: ['Brute Force 공격으로 판단하고, 관리자 계정의 비밀번호를 즉시 변경한다.', 'XSS 공격으로 판단하고, 웹 페이지의 입력값 검증 로직을 점검한다.', 'SQL Injection으로 판단하고, 데이터베이스 접근 권한을 재설정한다.'], sub: '정보보안',
+              explain: '다수 IP에서 동시 대량 접속으로 서비스가 느려지는 것은 DDoS(분산 서비스 거부) 공격의 전형적 징후이다. Brute Force는 특정 계정 대상 반복 로그인 시도, XSS는 악성 스크립트 삽입, SQL Injection은 DB 쿼리 조작으로 각각 다른 공격 유형이다.' },
+            { q: '공공기관이 블록체인 기반 전자투표 시스템 도입을 검토하고 있다. 블록체인의 기술적 특성을 고려할 때 가장 적절한 기대 효과는?',
+              correct: '분산 원장에 투표 기록이 저장되어 특정 관리자가 임의로 결과를 변경하기 어렵다.',
+              wrongs: ['중앙 서버가 모든 투표를 승인하므로 처리 속도가 기존 시스템보다 빠르다.', '투표자의 개인 정보를 완전히 익명화할 수 있어 별도의 보안 장치가 불필요하다.', '합의 알고리즘이 자동으로 부정 투표를 탐지하여 재투표를 요청한다.'], sub: '정보기술',
+              explain: '블록체인의 핵심은 탈중앙화 분산 원장으로, 데이터 변경이 매우 어렵다는 무결성이 투표 시스템에 적합하다. 중앙 서버 승인은 블록체인과 반대 개념이고, 완전 익명화와 부정투표 자동 탐지는 블록체인의 고유 기능이 아니다.' },
+            { q: '기관 정보시스템에서 보안팀이 아직 제조사 패치가 제공되지 않은 취약점이 악용되고 있음을 탐지했다. 이 상황에서 가장 적절한 대응은?',
+              correct: '해당 취약점에 대한 임시 완화 조치(방화벽 규칙, 접근 제한)를 적용하고, 제조사 패치 배포를 모니터링한다.',
+              wrongs: ['제조사의 공식 패치가 배포될 때까지 해당 시스템의 운영을 그대로 유지한다.', '취약점이 공개되지 않도록 내부에서만 관리하고 외부 보안 기관 신고를 보류한다.', '해당 소프트웨어를 즉시 삭제하고 대체 소프트웨어로 전환하여 운영한다.'], sub: '정보보안',
+              explain: '제로데이 취약점(패치 미제공 상태의 보안 결함)이 악용 중이면 임시 완화 조치로 피해를 최소화하면서 패치 배포를 기다려야 한다. 방치는 추가 피해를 초래하고, 신고 보류는 법적 의무 위반이며, 즉시 삭제는 업무 연속성을 심각하게 훼손한다.' }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1052,7 +1097,7 @@ class QuestionGenerator {
         return {
           area: '정보능력', subArea: c.sub, level, type: level === 'beginner' ? '피듈형' : 'PSAT형', timeLimit: 80,
           question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`,
+          explanation: c.explain || `정답: ${c.correct}`,
           keywords: ['정보능력', c.sub]
         };
       }
@@ -1201,7 +1246,7 @@ class QuestionGenerator {
           area: '직무수행능력', subArea: c.sub, level: c.level,
           type: c.level === 'beginner' ? '피듈형' : 'PSAT형', timeLimit: 80,
           question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: [c.sub, '직무수행']
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 ${c.sub} 분야의 유사 개념이나 정답의 조건을 충족하지 못한다.`, keywords: [c.sub, '직무수행']
         };
       }
     }));
@@ -1239,15 +1284,15 @@ class QuestionGenerator {
               wrongs: ['감사원이 분기별로 경영 실적을 평가한다.', '국회가 직접 경영평가를 실시한다.', '평가 결과는 비공개로 처리된다.'] }
           ],
           advanced: [
-            { q: '준정부기관에 대한 설명으로 옳은 것은?',
-              correct: '공기업이 아닌 공공기관 중 기금관리형과 위탁집행형으로 구분된다.',
-              wrongs: ['정부 50% 이상 출자 기관만 해당한다.', '시장형과 준시장형으로 구분된다.', '기타공공기관과 동일한 분류이다.'] },
-            { q: '애자일(Agile) 조직의 특성으로 옳지 않은 것은?',
-              correct: '장기적 계획에 따라 순차적으로 업무를 수행한다.',
-              wrongs: ['짧은 주기의 반복적 개선을 추구한다.', '자율적 팀 구성과 빠른 의사결정을 강조한다.', '변화에 유연하게 대응한다.'] },
-            { q: '거버넌스(Governance)에 대한 설명으로 옳은 것은?',
-              correct: '정부, 시장, 시민사회 등 다양한 주체가 참여하는 협력적 통치 방식이다.',
-              wrongs: ['정부가 단독으로 정책을 결정하고 집행하는 방식이다.', '시장 원리에 의해서만 자원 배분이 이루어지는 체제이다.', '시민사회가 정부를 대체하는 통치 형태이다.'] }
+            { q: '{ORG}이(가) 정부 경영평가에서 조직 운영 효율화를 요구받았다. 현재 수직적 계층 구조로 부서 간 협업이 지연되고 있을 때, 가장 적절한 개선 방안은?',
+              correct: '프로젝트 목표별 부서 횡단 팀을 구성하고, 짧은 주기의 반복적 개선과 자율적 의사결정을 도입한다.',
+              wrongs: ['기존 계층 구조를 유지하면서 결재 단계를 추가하여 의사결정의 정확성을 높인다.', '모든 부서를 통합하여 하나의 대규모 조직으로 재편성한 뒤 중앙집권적으로 관리한다.', '부서 간 업무를 완전히 분리하여 각 부서가 독립적으로 업무를 완결 처리하도록 한다.'] },
+            { q: '{ORG}에서 신규 사업 추진을 위해 다양한 이해관계자(정부, 지역주민, 시민단체)와 의견 조율이 필요하다. 가장 적절한 의사결정 체계는?',
+              correct: '거버넌스 체계를 구축하여 정부·지역주민·시민단체 등 다양한 주체가 참여하는 협의체를 운영한다.',
+              wrongs: ['기관이 사업 계획을 단독으로 확정한 뒤, 사후에 이해관계자에게 결과를 통보한다.', '시장 원리에 따라 경제적 타당성만 기준으로 판단하고 사회적 의견은 참고만 한다.', '시민단체에 의사결정권을 전적으로 위임하여 공정성 시비를 원천 차단한다.'] },
+            { q: '{ORG}은(는) 공공기관 운영에 관한 법률에 따라 분류된다. 공기업이 아닌 공공기관이 준정부기관으로 지정될 때의 분류 기준으로 옳은 것은?',
+              correct: '기금관리형과 위탁집행형으로 구분되며, 기금 관리 여부가 주요 기준이다.',
+              wrongs: ['자산 규모와 자체수입 비율에 따라 시장형과 준시장형으로 구분된다.', '정부 출자 비율이 50% 이상인 기관만 준정부기관으로 지정될 수 있다.', '기타공공기관과 동일한 기준으로 분류되며, 명칭만 다르게 부여된다.'] }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1255,8 +1300,8 @@ class QuestionGenerator {
         const choices = [c.correct, ...c.wrongs]; this._shuffle(choices);
         return {
           area: '조직이해능력', subArea: '조직구조', level, type: level === 'beginner' ? '피듈형' : 'PSAT형', timeLimit: 80,
-          question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: ['조직이해', '조직구조']
+          question: this._replaceOrg(c.q), choices, answer: choices.indexOf(c.correct),
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 조직이해 분야의 유사 개념이나 정답의 조건과 다르다.`, keywords: ['조직이해', '조직구조']
         };
       }
     }));
@@ -1295,16 +1340,16 @@ class QuestionGenerator {
           advanced: [
             { q: '연구원이 가설을 뒷받침하지 못하는 이상치를 발견했다. 마감이 임박한 상황에서 가장 적절한 행동은?',
               correct: '이상치를 포함한 전체 데이터를 보고하고, 원인을 추가 분석하여 투명하게 기술한다.',
-              wrongs: ['이상치를 통계적 오류로 판단하여 제거한다.', '가설에 맞는 결과가 나올 때까지 실험을 반복한다.', '"추후 분석 예정"으로 기재하고 넘어간다.'] },
+              wrongs: ['이상치를 통계적 오류로 판단하고, 연구 목적에 부합하는 데이터만 선별하여 보고한다.', '가설에 맞는 결과가 나올 때까지 실험 조건을 조정하여 추가 검증을 진행한다.', '마감 일정을 고려하여 이상치 분석은 "추후 후속 연구에서 분석 예정"으로 기재한다.'] },
             { q: '내부 감사 중 동료의 횡령 의혹을 발견한 직원의 가장 적절한 행동은?',
-              correct: '객관적 증거를 확보한 뒤 내부 신고 채널을 통해 신고한다.',
-              wrongs: ['동료에게 직접 확인하고 자진 반환을 권유한다.', '확실한 증거가 없으므로 관망한다.', '즉시 수사기관에 고발한다.'] },
+              correct: '객관적 증거를 확보한 뒤 조직의 내부 신고 채널을 통해 공식적으로 신고한다.',
+              wrongs: ['동료에게 직접 사실관계를 확인하고, 자진 반환 기회를 제공하여 내부에서 해결한다.', '아직 확실한 증거가 부족하므로 추가 정황이 확보될 때까지 상황을 관망한다.', '조직 내부 절차를 거치지 않고 즉시 수사기관에 고발하여 외부 조사를 요청한다.'] },
             { q: '의약품 영업사원이 거래처 의사에게 고가 해외 학회 참석비를 지원하겠다고 제안했다. 가장 적절한 판단은?',
-              correct: '처방 결정에 영향을 줄 수 있는 경제적 이익 제공으로, 리베이트에 해당한다.',
-              wrongs: ['학회 참석은 전문성 향상에 기여하므로 정당한 학술 지원이다.', '업계 관행이므로 적정 수준이면 문제없다.', '자발적 요청이 아니므로 제안 단계에서는 문제되지 않는다.'] },
+              correct: '처방 결정에 영향을 줄 수 있는 경제적 이익 제공에 해당하여 리베이트로 판단된다.',
+              wrongs: ['학회 참석은 의료 전문성 향상에 기여하는 활동이므로 정당한 학술 지원에 해당한다.', '의약품 업계에서 통용되는 관행이므로 사회 통념상 적정 수준이면 문제가 없다.', '의사 측의 자발적 요청이 아닌 영업사원의 제안이므로 아직 문제가 되지 않는다.'] },
             { q: '공직자가 퇴직 후 관련 업체에 취업하려 한다. 가장 적절한 설명은?',
-              correct: '공직자윤리법에 따라 퇴직 후 일정 기간 취업 제한 대상인지 확인해야 한다.',
-              wrongs: ['퇴직 후에는 취업 제한이 없다.', '기관장의 허가만 있으면 바로 취업할 수 있다.', '비영리 기관이면 제한 없이 취업할 수 있다.'] }
+              correct: '공직자윤리법에 따라 퇴직 후 일정 기간 취업 제한 대상에 해당하는지 확인해야 한다.',
+              wrongs: ['퇴직과 동시에 공직자 신분이 해소되므로 취업 활동에 별도의 제한이 없다.', '소속 기관장의 사전 허가를 받으면 퇴직 즉시 관련 업체에 취업이 가능하다.', '영리 기업이 아닌 비영리 기관이면 업무 관련성과 무관하게 취업이 허용된다.'] }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1314,8 +1359,9 @@ class QuestionGenerator {
           area: '직업윤리', subArea: '공직윤리', level,
           type: level === 'beginner' ? '피듈형' : level === 'advanced' ? 'PSAT형' : '피듈형',
           timeLimit: level === 'advanced' ? 100 : 70,
-          question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: ['직업윤리', '공직윤리', '윤리딜레마']
+          question: (level === 'advanced' ? `[기관 윤리 맥락: ${this._orgEthicsContext()}]\n\n` : '') + c.q,
+          choices, answer: choices.indexOf(c.correct),
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 직업윤리·공직윤리 원칙에 부합하지 않거나 법적 근거가 없는 대응이다.`, keywords: ['직업윤리', '공직윤리', '윤리딜레마']
         };
       }
     }));
@@ -1352,12 +1398,15 @@ class QuestionGenerator {
               wrongs: ['경영 전반을 관리하는 것을 선호한다.', '안정적인 조직 생활을 최우선시한다.', '독립적으로 일하는 것을 가장 선호한다.'] }
           ],
           advanced: [
-            { q: '역량(Competency) 모델링에 대한 설명으로 옳은 것은?',
-              correct: '우수 성과자의 행동 특성을 분석하여 직무별 필요 역량을 도출한다.',
-              wrongs: ['모든 직무에 동일한 역량 기준을 적용한다.', '학력과 자격증만으로 역량을 측정한다.', '역량 모델은 한번 수립하면 변경할 수 없다.'] },
-            { q: '경력 전환(Career Transition)에 대한 설명으로 옳은 것은?',
-              correct: '기존 경험과 역량을 새로운 분야에 전이시켜 활용할 수 있다.',
-              wrongs: ['경력 전환 시 이전 경력은 인정되지 않는다.', '경력 전환은 실패 시 원래 직무로 복귀가 불가능하다.', '경력 전환은 20대에서만 가능하다.'] }
+            { q: '인사팀이 신규 직무에 적합한 인재를 선발하기 위해 역량 모델을 수립하려 한다. 가장 적절한 접근 방법은?',
+              correct: '해당 직무의 우수 성과자 행동 특성을 분석하고, 직무별 차별화된 역량 기준을 도출한다.',
+              wrongs: ['전 직무에 동일한 역량 기준을 적용하여 평가의 일관성과 공정성을 확보한다.', '지원자의 학력과 자격증 보유 현황을 기준으로 역량 수준을 측정한다.', '한번 수립된 역량 모델을 그대로 유지하여 평가 기준의 안정성을 보장한다.'] },
+            { q: '10년차 행정직 공무원이 데이터 분석 분야로 경력 전환을 고려하고 있다. 경력 전환 계획 수립 시 가장 적절한 전략은?',
+              correct: '기존 행정 업무에서 축적한 문제 분석력과 보고서 작성 역량을 데이터 분석 분야에 전이 활용한다.',
+              wrongs: ['경력 전환 시 이전 행정 경력은 인정되지 않으므로 신입과 동일한 조건에서 시작한다.', '전환에 실패하면 원래 직무로 복귀가 불가능하므로 현 직무를 유지하는 것이 안전하다.', '경력 전환은 경력 초기에만 효과적이므로 10년차에는 현실적으로 어렵다.'] },
+            { q: '조직이 직원들의 자기개발 역량 진단을 실시하려 한다. SWOT 분석을 개인 경력개발에 적용할 때 가장 적절한 활용 방법은?',
+              correct: '개인의 강점·약점을 내부 요인으로, 업계 동향·위협 요소를 외부 요인으로 분석하여 개발 전략을 수립한다.',
+              wrongs: ['조직의 재무 성과를 강점·약점으로, 경쟁사 현황을 기회·위협으로 분석한다.', '상사의 평가 점수만을 기준으로 강점과 약점을 구분하여 개발 영역을 선정한다.', '강점 영역에만 집중 투자하고 약점 영역은 개발 대상에서 제외한다.'] }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1366,7 +1415,7 @@ class QuestionGenerator {
         return {
           area: '자기개발능력', subArea: '경력개발', level, type: '모듈형', timeLimit: 70,
           question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: ['자기개발', '경력개발']
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 자기개발·경력개발 이론에서 정답의 요건을 충족하지 않는 선��지이다.`, keywords: ['자기개발', '경력개발']
         };
       }
     }));
@@ -1401,15 +1450,15 @@ class QuestionGenerator {
               wrongs: ['업무 평가를 위한 감독 활동이다.', '동료 간의 업무 분담 체계이다.', '인사팀이 주관하는 교육 프로그램이다.'] }
           ],
           advanced: [
-            { q: '비폭력 대화(NVC)의 4단계 순서로 옳은 것은?',
-              correct: '관찰 → 느낌 → 욕구 → 부탁',
-              wrongs: ['느낌 → 관찰 → 부탁 → 욕구', '부탁 → 욕구 → 관찰 → 느낌', '욕구 → 느낌 → 관찰 → 부탁'] },
-            { q: '조직 내 갈등이 긍정적 기능을 할 수 있는 경우는?',
-              correct: '적절한 수준의 갈등이 창의적 문제 해결과 혁신을 촉진할 때',
-              wrongs: ['갈등이 극대화되어 구성원 간 경쟁이 심화될 때', '갈등을 회피하여 표면적 화합을 유지할 때', '소수의 의견이 다수에 의해 억압될 때'] },
-            { q: '감성 지능(EQ)의 구성 요소에 해당하지 않는 것은?',
-              correct: '논리적 추론 능력',
-              wrongs: ['자기 인식', '자기 조절', '사회적 기술'] }
+            { q: '팀 회의에서 A 직원이 "당신은 항상 보고서를 늦게 제출한다"고 B 직원에게 말했다. 비폭력 대화(NVC) 원칙에 따라 가장 적절하게 재구성한 표현은?',
+              correct: '"이번 달 보고서 3건이 기한 후에 제출되었는데(관찰), 일정 관리가 걱정됩니다(느낌). 팀 일정에 맞추고 싶은데(욕구), 제출 기한을 함께 조정할 수 있을까요?(부탁)"',
+              wrongs: ['"보고서를 늦게 내면 팀에 피해가 간다는 걸 느꼈으면 좋겠습니다(느낌). 왜 항상 늦는지 설명해 주세요(관찰). 앞으로는 기한을 지켜 주세요(부탁). 저도 도울 수 있습니다(욕구)."', '"앞으로 기한을 꼭 지켜 주세요(부탁). 저는 팀워크를 중시합니다(욕구). 이번 달에 늦은 적이 있었죠(관찰). 좀 답답했습니다(느낌)."', '"팀 일정에 맞추는 게 중요합니다(욕구). 보고서가 늦으면 제가 불안해집니다(느낌). 이번 달 3건이 지연되었습니다(관찰). 다음부터 기한을 맞춰 주세요(부탁)."'] },
+            { q: '프로젝트 팀에서 기술부서와 기획부서가 개발 방향을 두고 의견이 대립하고 있다. 갈등 관리 관점에서 가장 적절한 팀장의 대응은?',
+              correct: '양 부서의 관점을 모두 경청한 뒤, 핵심 쟁점을 정리하여 양측이 수용 가능한 대안을 공동으로 도출하게 한다.',
+              wrongs: ['의견 대립이 심화되기 전에 팀장이 한쪽 방향을 결정하여 갈등을 조기에 종결시킨다.', '갈등이 자연히 해소될 수 있도록 별도 조치 없이 양 부서의 자율적 해결을 기다린다.', '다수결 투표를 실시하여 더 많은 지지를 받은 방향으로 결정하고 반대 의견은 수용하지 않는다.'] },
+            { q: '신임 팀장이 부임한 팀에서 구성원 간 불신과 비공식 파벌이 형성되어 있다. Tuckman 모델에 따르면 이 팀은 어떤 단계에 해당하며, 가장 적절한 리더십 전략은?',
+              correct: '갈등기(Storming)에 해당하며, 명확한 역할 분담과 팀 규범을 함께 수립하여 규범기로 전환을 유도한다.',
+              wrongs: ['형성기(Forming)에 해당하며, 구성원 간 친밀감 형성을 위한 팀빌딩 활동을 우선 실시한다.', '규범기(Norming)에 해당하며, 기존 규범을 강화하고 성과 목표를 상향 조정한다.', '성과기(Performing)에 해당하며, 팀의 자율성을 존중하여 리더의 개입을 최소화한다.'] }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1418,7 +1467,7 @@ class QuestionGenerator {
         return {
           area: '대인관계능력', subArea: '팀워크', level, type: '피듈형', timeLimit: 70,
           question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: ['대인관계', '팀워크', '의사소통']
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 대인관계·팀워크 이론에서 정답의 요건을 충족하지 않는 선택지이다.`, keywords: ['대인관계', '팀워크', '의사소통']
         };
       }
     }));
@@ -1445,9 +1494,10 @@ class QuestionGenerator {
               wrongs: ['등록일로부터 10년', '출원일로부터 50년', '등록일로부터 20년'] }
           ],
           intermediate: [
-            { q: '클라우드 서비스 모델에 해당하지 않는 것은?',
-              correct: 'DaaS(Database as a Service)',
-              wrongs: ['IaaS(Infrastructure as a Service)', 'PaaS(Platform as a Service)', 'SaaS(Software as a Service)'] },
+            { q: '클라우드 컴퓨팅의 3대 표준 서비스 모델에 해당하지 않는 것은?',
+              correct: 'NaaS(Network as a Service)',
+              wrongs: ['IaaS(Infrastructure as a Service)', 'PaaS(Platform as a Service)', 'SaaS(Software as a Service)'],
+              explain: '클라우드 컴퓨팅의 3대 표준 서비스 모델은 IaaS(인프라), PaaS(플랫폼), SaaS(소프트웨어)이다. NaaS(네트워크 서비스)는 파생 모델로 NIST 표준 3대 모델에 포함되지 않는다.' },
             { q: '기술 혁신의 유형 중 파괴적 혁신(Disruptive Innovation)에 대한 설명으로 옳은 것은?',
               correct: '기존 시장의 하위 영역이나 새로운 시장에서 시작하여 점차 주류 시장을 대체한다.',
               wrongs: ['기존 기술을 점진적으로 개선하는 혁신이다.', '대기업이 주도하는 대규모 R&D 투자이다.', '기존 고객의 니즈를 충족시키는 방향으로 진행된다.'] },
@@ -1456,15 +1506,15 @@ class QuestionGenerator {
               wrongs: ['인터넷을 통해 사물을 구매하는 기술이다.', '사물의 형상을 3D로 출력하는 기술이다.', '인터넷 접속 속도를 높이는 통신 기술이다.'] }
           ],
           advanced: [
-            { q: '디지털 전환(Digital Transformation)에 대한 설명으로 옳은 것은?',
-              correct: '디지털 기술을 활용하여 비즈니스 모델과 조직 프로세스를 근본적으로 변혁한다.',
-              wrongs: ['단순히 종이 문서를 전자 문서로 변환하는 것이다.', '기존 IT 시스템을 최신 버전으로 업데이트하는 것이다.', '모든 업무를 자동화하여 인력을 감축하는 것이다.'] },
-            { q: '기술 표준화의 장점으로 옳지 않은 것은?',
-              correct: '기술 혁신 속도가 저하되어 시장 경쟁이 감소한다.',
-              wrongs: ['호환성 향상으로 사용자 편의가 증가한다.', '대량 생산이 가능하여 비용이 절감된다.', '기술 이전이 용이해진다.'] },
-            { q: 'AI 윤리에서 설명가능성(Explainability)이 중요한 이유는?',
-              correct: 'AI의 의사결정 과정을 이해하고 검증할 수 있어야 신뢰성과 책임성을 확보할 수 있기 때문이다.',
-              wrongs: ['AI의 연산 속도를 향상시킬 수 있기 때문이다.', 'AI 모델의 학습 데이터를 줄일 수 있기 때문이다.', 'AI 시스템의 개발 비용을 절감할 수 있기 때문이다.'] }
+            { q: '{ORG}이(가) 종이 기반 민원 접수 체계를 온라인으로 전환하려 한다. 단순 전산화를 넘어 디지털 전환(DX)으로 추진하려면 가장 적절한 방향은?',
+              correct: '민원 데이터를 분석하여 빈번한 유형은 AI 자동 처리하고, 업무 프로세스 자체를 재설계한다.',
+              wrongs: ['기존 종이 양식을 동일한 형태의 전자 문서로 변환하여 온라인으로 제출받는다.', '민원 접수 시스템의 서버를 최신 사양으로 교체하고 소프트웨어를 업데이트한다.', '모든 민원 처리 과정을 자동화하여 담당 인력을 최소한으로 감축한다.'] },
+            { q: '{ORG}에서 AI 기반 인사평가 시스템을 도입했으나, 평가 결과에 대한 직원들의 불만이 제기되었다. AI 윤리 관점에서 가장 우선적으로 검토해야 할 사항은?',
+              correct: 'AI의 평가 기준과 판단 근거를 직원에게 설명할 수 있는지 확인하고, 이의 제기 절차를 마련한다.',
+              wrongs: ['AI 모델의 학습 데이터 양을 늘려 평가 정확도를 높이면 불만이 자연히 해소된다.', 'AI 시스템의 연산 처리 속도를 개선하여 평가 결과를 더 빠르게 통보한다.', 'AI 평가 시스템의 유지보수 비용을 절감하여 도입 효과를 극대화한다.'] },
+            { q: '{ORG}이(가) 협력기관들과 공통 데이터 형식을 채택하려 한다. 기술 표준화를 통해 기대할 수 있는 효과와 한계에 대한 설명으로 옳지 않은 것은?',
+              correct: '표준 규격이 확정되면 기술 혁신의 방향이 고정되어 시장 내 경쟁이 감소한다.',
+              wrongs: ['기관 간 데이터 호환성이 향상되어 협업 시 시스템 연동이 용이해진다.', '공통 규격 기반으로 대량 조달이 가능해져 도입 비용이 절감된다.', '표준화된 기술 문서를 통해 협력기관 간 기술 이전이 용이해진다.'] }
           ]
         };
         const pool = pools[level] || pools.intermediate;
@@ -1472,8 +1522,8 @@ class QuestionGenerator {
         const choices = [c.correct, ...c.wrongs]; this._shuffle(choices);
         return {
           area: '기술능력', subArea: '기술이해', level, type: level === 'beginner' ? '모듈형' : 'PSAT형', timeLimit: 70,
-          question: c.q, choices, answer: choices.indexOf(c.correct),
-          explanation: `정답: ${c.correct}`, keywords: ['기술능력', '기술이해']
+          question: this._replaceOrg(c.q), choices, answer: choices.indexOf(c.correct),
+          explanation: c.explain || `[정답] ${c.correct}. [오답] ${c.wrongs.join(' / ')} — 이들은 기술 분야의 유사 개념이나 정답의 조건에 부합하지 않는 선택지이다.`, keywords: ['기술능력', '기술이해']
         };
       }
     }));
