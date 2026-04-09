@@ -13,6 +13,229 @@
  *  4. 정답 검증: 인덱스 범위, 중복 보기 체크
  */
 
+// ═══════════════════════════════════════════════════
+//  기관별 컨텍스트 프로필
+// ═══════════════════════════════════════════════════
+const INSTITUTION_PROFILES = {
+  '한국전력공사 (KEPCO)': {
+    depts: ['송배전사업처', '전력거래처', '신재생에너지처', '고객서비스처', '안전관리처', '경영지원처', '디지털혁신처', '연구개발처'],
+    budgetItems: ['전력구입��', '송배전설비투자비', '신재생에너지사업비', '안전관리비', '인건비'],
+    scenarios: [
+      { situation: '하절기 전력수요 급증', item: '전력 공급량', unit: 'GWh' },
+      { situation: '신재생에너지 발전비율 확대', item: '태양광 발전량', unit: 'MWh' },
+      { situation: '노후 송전탑 교체 사업', item: '설비 교체율', unit: '%' },
+      { situation: '전기요금 미납 민원 증가', item: '미납 민원 건수', unit: '건' },
+      { situation: 'ESG 경영 실적 평가', item: '탄소배출 감축량', unit: '톤' },
+    ],
+    regulations: [
+      { name: '전력설비 안전관리 규정', dept: '안전관리처' },
+      { name: '신재생에너지 발전��업 운영 규정', dept: '신재생에너지처' },
+      { name: '전기요금 부과·징수 규정', dept: '고객서비스처' },
+    ],
+    ethicsContext: '전력 공급의 공공성과 안전성, 에너지 전환 정책 이행'
+  },
+  '국민건강보험공단': {
+    depts: ['건강보험운영부', '장기요양운영부', '건강관리부', '���험급여부', '재정관리부', '고객지원부', '정보화추진부', '감사실'],
+    budgetItems: ['보험급여비', '장기요양���여비', '건강검진비', '관리운영비', '인건비'],
+    scenarios: [
+      { situation: '건강보험 재정 적자 확대', item: '보험급여 지출액', unit: '조원' },
+      { situation: '노인장기요양 수급자 증가', item: '장기요양 이용자 수', unit: '만명' },
+      { situation: '비급여 의료비 부담 민원', item: '민원 접수 건수', unit: '건' },
+      { situation: '국가건강검진 수검률 향상', item: '검진 수검률', unit: '%' },
+      { situation: '부정수급 적발 강화', item: '부정수급 적발 건수', unit: '건' },
+    ],
+    regulations: [
+      { name: '건강보험 급여기준 규정', dept: '보험급여부' },
+      { name: '장기요양등급 판정 기준', dept: '장기요양운영부' },
+      { name: '건강검진 실시 기준', dept: '건강관리부' },
+    ],
+    ethicsContext: '국민 건강권 보장과 보험재정의 지속가능성'
+  },
+  '한국수자원공사 (K-water)': {
+    depts: ['수도사업처', '댐운영처', '수질환경처', '스마트워터처', '안전방재처', '해외사업처', '경영기획처', '기술연구원'],
+    budgetItems: ['댐관리운영비', '수도시설투자비', '수질관리비', '안전관리비', '인건비'],
+    scenarios: [
+      { situation: '가뭄 대비 용수 확보', item: '댐 저수율', unit: '%' },
+      { situation: '수돗물 수질 민원 대응', item: '수질검사 부적합 건수', unit: '건' },
+      { situation: '스마트 물관리 시스템 구축', item: '스마트미터 보급률', unit: '%' },
+      { situation: '노후 상수관 교체 사업', item: '���로 교체율', unit: '%' },
+      { situation: '홍수기 댐 방류량 관리', item: '방류량', unit: '톤/초' },
+    ],
+    regulations: [
+      { name: '댐 운영·관리 규정', dept: '댐운영처' },
+      { name: '수돗물 수질기준 관리 규정', dept: '수질환경처' },
+      { name: '가뭄 대응 비상급수 매뉴얼', dept: '안전방재처' },
+    ],
+    ethicsContext: '안전한 물 공급과 수자원의 효율적 관리'
+  },
+  '한국토지주택공사 (LH)': {
+    depts: ['주택건설처', '도시재생처', '택지개발처', '임대주택관리처', '주거복지처', '기술심사처', '경영관리처', '감사실'],
+    budgetItems: ['택지개발비', '주택건설비', '임대주택관리비', '도시재생사업비', '인건비'],
+    scenarios: [
+      { situation: '공공임대주택 입주 대기자 증가', item: '임대주택 공급 호수', unit: '호' },
+      { situation: '도시재생 뉴딜사업 추진', item: '사업 완료율', unit: '%' },
+      { situation: '분양가 산정 민원', item: '��원 접수 건수', unit: '건' },
+      { situation: '하자보수 처리 지연', item: '하자보수 처리율', unit: '%' },
+      { situation: '3기 신도시 개발 사업', item: '택지 조성 면적', unit: '만㎡' },
+    ],
+    regulations: [
+      { name: '임대주택 입주자 선정 기준', dept: '임대주택관리처' },
+      { name: '공공분양 가격 산정 규정', dept: '주택건설처' },
+      { name: '하자보수 처리 규정', dept: '기술심사처' },
+    ],
+    ethicsContext: '주거 안정과 공정한 주택 공급, 투기 방지'
+  },
+  '인천국제공항공사': {
+    depts: ['항공마���팅처', '여객터미널운영처', '화물사업처', '공항시설처', '안전보안처', '스마트공항추진처', '경영기획처', '환경관리처'],
+    budgetItems: ['시설유지보수비', '보안장비투자비', '마케팅비', '환경관리비', '인건비'],
+    scenarios: [
+      { situation: '여객 수요 회복에 따른 터미널 혼잡', item: '일평균 여객 수', unit: '만명' },
+      { situation: '항공화물 물동량 증가', item: '화물 처리량', unit: '만톤' },
+      { situation: '활주로 안전점검 강화', item: '안전점검 건수', unit: '건' },
+      { situation: '스마트 공항 서비스 확대', item: '자동출입국 이용률', unit: '%' },
+      { situation: '항공기 소음 민원 대응', item: '소음 민원 건수', unit: '건' },
+    ],
+    regulations: [
+      { name: '공항 보안검색 운영 규정', dept: '안전보안처' },
+      { name: '항공기 소음 관리 기준', dept: '환경관리처' },
+      { name: '여객터미널 운영 매뉴얼', dept: '여객터미널운영처' },
+    ],
+    ethicsContext: '항공 안전과 서비스 ���질, 공항 주변 환경 보호'
+  },
+  '한국도로공사': {
+    depts: ['도로건설처', '교통관리처', '안전관리처', '고속도로관리처', '톨링시스템처', '건설기술처', '경영기획처', '감사실'],
+    budgetItems: ['도로건설비', '유지보수비', '교통관리비', '안전시설투자비', '인건비'],
+    scenarios: [
+      { situation: '명절 고속도로 교통 혼잡', item: '일평균 교통량', unit: '만대' },
+      { situation: '노후 교량 안전점검', item: '교량 보수 건수', unit: '건' },
+      { situation: '하이패스 이용률 확대', item: '하이패스 이용률', unit: '%' },
+      { situation: '고속도로 졸음운전 사고 예방', item: '졸음쉼터 이용 건수', unit: '건' },
+      { situation: '스마트 톨링 시스템 전환', item: '시스템 전환율', unit: '%' },
+    ],
+    regulations: [
+      { name: '고속도로 안전관리 규정', dept: '안전관리처' },
+      { name: '통행료 부과·징수 규정', dept: '톨링시스템처' },
+      { name: '도로 유지보수 기준', dept: '고속도로관리처' },
+    ],
+    ethicsContext: '도로 안전과 이용자 편의, 공정한 통행료 부과'
+  },
+  '한국가스���사 (KOGAS)': {
+    depts: ['천연가스공급처', '배관관리���', 'LNG터미널운영처', '안전관리처', '해외사업처', '수소사업추진처', '기술연구원', '경영지원처'],
+    budgetItems: ['천연가스도입비', '배관건���비', 'LNG저장시설비', '안전관리비', '인건비'],
+    scenarios: [
+      { situation: '동절기 천연가스 수요 급증', item: '일일 가스 공급량', unit: '백만㎥' },
+      { situation: '가스 배관 노후화 점검', item: '배관 교체율', unit: '%' },
+      { situation: '수소경제 전환 사업', item: '수소 충전소 설치 수', unit: '개소' },
+      { situation: 'LNG 도입가 변동', item: 'LNG 도입 단가', unit: '달러/톤' },
+      { situation: '가스 안전사고 예방', item: '안전점검 이행률', unit: '%' },
+    ],
+    regulations: [
+      { name: '천연가스 공급 안전관리 규정', dept: '안전관리처' },
+      { name: 'LNG 인수기지 운영 규정', dept: 'LNG터미널운영처' },
+      { name: '가스 요금 산정 기준', dept: '천연가스공급처' },
+    ],
+    ethicsContext: '에너지 안정 공급�� 안전관리, 탄소중립 전환'
+  },
+  '한국철도공사 (코레일)': {
+    depts: ['여객사업처', '광역철도처', '물류사업처', '안전관리처', '차량관리처', '시설관리처', '역무사업처', '경영지원처'],
+    budgetItems: ['차량유지보수비', '선로관리비', '안전시설투자비', '역사운영비', '인건비'],
+    scenarios: [
+      { situation: 'KTX 이용객 증가�� 따른 좌석 ��족', item: 'KTX 이용객 수', unit: '만명' },
+      { situation: '열차 정시운행률 개선', item: '정시운행률', unit: '%' },
+      { situation: '노후 차량 교체 사업', item: '차량 교체 대수', unit: '량' },
+      { situation: '철도 안전사고 예방', item: '안전사고 발생 건수', unit: '건' },
+      { situation: '무궁화호 적자 노선 운영', item: '노선별 영업손실', unit: '억원' },
+    ],
+    regulations: [
+      { name: '열차 운행 안전 규정', dept: '안전관리처' },
+      { name: '여객 운임 산정 기준', dept: '여객사업처' },
+      { name: '철도 시설물 유지보수 기준', dept: '시설관리처' },
+    ],
+    ethicsContext: '철도 안전과 정시운행, 공공교통 서비스 형평성'
+  },
+  '서울교통공사': {
+    depts: ['운전사업처', '차량관리처', '시설관리처', '안전관리처', '역무사업처', '고객서비스처', '경영기획처', '노사협력처'],
+    budgetItems: ['전동차유지보수비', '시설관리비', '안전투자비', '역사운영비', '인건비'],
+    scenarios: [
+      { situation: '출퇴근 시간대 혼잡도 관리', item: '혼잡도', unit: '%' },
+      { situation: '���하철 ���죄 예방 강화', item: 'CCTV 설치 대수', unit: '대' },
+      { situation: '노후 전동차 교체', item: '전동차 교체 편성 수', unit: '편성' },
+      { situation: '역사 내 미세먼지 관리', item: '미세먼지 농도', unit: '㎍/㎥' },
+      { situation: '장애인 이동권 보장 시설 확충', item: '엘리베이터 설치율', unit: '%' },
+    ],
+    regulations: [
+      { name: '전동차 운행 안전 규정', dept: '안전관리처' },
+      { name: '역사 시설 관리 기준', dept: '시설관리처' },
+      { name: '고객 민원 처리 규정', dept: '고객서비스처' },
+    ],
+    ethicsContext: '시민 안전과 교통약자 배려, ���중교통 서비스 품질'
+  },
+  '국민연금공단': {
+    depts: ['연금급여처', '가입지원처', '기금운용��', '장애심사처', '고객서비스처', '정보화추진처', '경영지원처', '감사실'],
+    budgetItems: ['연금급여비', '기금운용관리비', '관리운영비', '정보화투자비', '인건비'],
+    scenarios: [
+      { situation: '국민연금 재정 안정화', item: '기금 적립금', unit: '조원' },
+      { situation: '연��� 수급자 증가', item: '연금 수급자 수', unit: '만명' },
+      { situation: '기금 수익률 관리', item: '기금 운용 수익률', unit: '%' },
+      { situation: '보험료 체납 관리', item: '체납률', unit: '%' },
+      { situation: '장애등급 판정 민원', item: '심사 청구 건수', unit: '건' },
+    ],
+    regulations: [
+      { name: '국민연금 급여 지급 기준', dept: '연금급여처' },
+      { name: '기금 운용 지침', dept: '기금운용처' },
+      { name: '장애등급 심사 규정', dept: '장애심사처' },
+    ],
+    ethicsContext: '노후소득 보장과 기금의 안정적 운용, 세대 간 형평성'
+  },
+  '근로복지공단': {
+    depts: ['산재보상처', '재활지원처', '보험가입처', '직업재활처', '의료사업처', '고객지원처', '경영기획처', '감사실'],
+    budgetItems: ['산재보험급여비', '재활치료비', '의료시설운영비', '직업훈련비', '인건비'],
+    scenarios: [
+      { situation: '산재 사망사고 감소 대책', item: '산재 사망자 수', unit: '명' },
+      { situation: '직업재활 서비스 확대', item: '직업복귀율', unit: '%' },
+      { situation: '산재보험 적용 사업장 확대', item: '가입 사업장 수', unit: '만개소' },
+      { situation: '통근 재해 인정 범위 확대', item: '통근재해 승인 건수', unit: '건' },
+      { situation: '요양급여 심사 민원', item: '심사 처리 건수', unit: '건' },
+    ],
+    regulations: [
+      { name: '산재보험 급여 지급 기준', dept: '산재보상처' },
+      { name: '재활급여 지원 규정', dept: '재활지원처' },
+      { name: '직업재활 훈련 운영 기준', dept: '직업재활처' },
+    ],
+    ethicsContext: '산업재해 근로자 보호와 직업복귀 지원'
+  },
+  'SBA (서울경제진흥원)': {
+    depts: ['중��기업지원처', '창업지원처', '소상공인지원처', '글로벌사업처', '경영기획처', '디지털전환지원처'],
+    budgetItems: ['중��기업지원금', '창업보육비', '소상공인지원비', '글로벌사업비', '인건비'],
+    scenarios: [
+      { situation: '서울시 소상공인 경영난 지원', item: '지원 사업장 수', unit: '개소' },
+      { situation: '청년 창업 지원 프로그램', item: '창업 기업 수', unit: '개' },
+      { situation: '전통시장 활성화 사업', item: '매출 증가율', unit: '%' },
+      { situation: '중소기업 디지털 전환 지원', item: '참여 기업 수', unit: '개' },
+    ],
+    regulations: [
+      { name: '중소기업 자금지원 규정', dept: '중소기업지원처' },
+      { name: '창업보육센터 운영 기준', dept: '창업지원처' },
+    ],
+    ethicsContext: '서울시 중소기업·소상���인의 경쟁력 강화'
+  },
+  'KOTRA (대한무역투자진흥공사)': {
+    depts: ['수출지원처', '투자유치처', '해외시장조사처', '무역관운영처', '디지털무역처', '경영지원처', '글로벌혁신처'],
+    budgetItems: ['해외무역관운영비', '수���지원사업비', '투자유치사업비', '시장조사비', '인건비'],
+    scenarios: [
+      { situation: '수출 중소기업 해외진출 지원', item: '수출 상담 건수', unit: '건' },
+      { situation: '외국인 직접투자(FDI) 유치', item: '투자 유치액', unit: '억달러' },
+      { situation: '해외 전시회 참가 지원', item: '참가 기업 수', unit: '개' },
+      { situation: '디지털 무역 플랫폼 확대', item: '온라인 수출액', unit: '억원' },
+    ],
+    regulations: [
+      { name: '해외무���관 운영 규정', dept: '무역관운영처' },
+      { name: '수출 바우처 사업 운영 기준', dept: '수출지원처' },
+    ],
+    ethicsContext: '대한민국 수출 경쟁력 강화와 공정�� 지원'
+  }
+};
+
 class QuestionGenerator {
   constructor() {
     this.name = 'QuestionGenerator';
@@ -24,6 +247,47 @@ class QuestionGenerator {
   /** 기관 컨텍스트 설정 */
   setContext(context) {
     this.context = context;
+  }
+
+  /** 기관명 반환 (없으면 랜덤 기관명) */
+  _orgName() {
+    if (this.context && this.context.companyName) return this.context.companyName;
+    const names = ['A공사', 'B공단', 'C기관', 'D공사', 'E기관', 'F공단', 'G기관', 'H공사'];
+    return names[this._rand(0, names.length - 1)];
+  }
+
+  /** 기관별 부서명 */
+  _orgDepts() {
+    const c = this._getProfile();
+    if (c) return this._shuffle([...c.depts]);
+    return this._shuffle(['총무팀', '기획팀', '사업팀', '홍보팀', '인사팀', '재무팀', 'IT팀', '법무팀', '감사팀', '교육팀']);
+  }
+
+  /** 기관별 예산항목 */
+  _orgBudgetItems() {
+    const c = this._getProfile();
+    if (c) return [...c.budgetItems];
+    return ['인건비', '운영비', '사업비', '출장비', '교육비'];
+  }
+
+  /** 기관별 사업/상황 시나리오 */
+  _orgScenario() {
+    const c = this._getProfile();
+    if (c) return c.scenarios[this._rand(0, c.scenarios.length - 1)];
+    return { situation: '업무 효율화', item: '민원처리 건수', unit: '건' };
+  }
+
+  /** 기관별 규정/정책 시나리오 */
+  _orgRegulation() {
+    const c = this._getProfile();
+    if (c) return c.regulations[this._rand(0, c.regulations.length - 1)];
+    return { name: '출장 관리 규정', dept: '총무과' };
+  }
+
+  /** 기관 프로필 조회 */
+  _getProfile() {
+    if (!this.context || !this.context.companyName) return null;
+    return INSTITUTION_PROFILES[this.context.companyName] || null;
   }
 
   /** 요청한 수만큼 동적 문제 생성 */
@@ -101,8 +365,7 @@ class QuestionGenerator {
     return ['beginner', 'intermediate', 'advanced'].map(level => ({
       area: '수리능력', areaCode: 'math', level,
       generator: () => {
-        const depts = ['총무팀', '기획팀', '사업팀', '홍보팀', '인사팀', '재무팀', 'IT팀', '법무팀', '감사팀', '교육팀'];
-        this._shuffle(depts);
+        const depts = this._orgDepts();
         const selected = depts.slice(0, this._rand(3, 5));
         const data = selected.map(d => {
           const budget = this._rand(200, 800) * 10;
@@ -142,7 +405,7 @@ class QuestionGenerator {
 
         return {
           area: '수리능력', subArea: '예산분석', level, type: 'PSAT형', timeLimit: level === 'advanced' ? 150 : 100,
-          question: `다음은 기관의 부서별 예산 현황이다. (단위: 만원)\n\n┌────────┬───────┬───────┬───────┐\n│  부서  │배정액 │집행액 │ 잔액  │\n├────────┼───────┼───────┼───────┤\n${table}\n├────────┼───────┼───────┼───────┤\n│  합계  │${String(totalBudget).padStart(7)}│${String(totalExec).padStart(7)}│${String(totalBudget - totalExec).padStart(7)}│\n└────────┴───────┴───────┴───────┘\n\n${qt.label} 부서는?`,
+          question: `다음은 ${this._orgName()}의 부서별 예산 현황이다. (단위: 만원)\n\n┌────────┬───────┬───────┬───────┐\n│  부서  │배정액 │집행액 │ 잔액  │\n├────────┼───────┼───────┼───────┤\n${table}\n├────────┼───────┼───────┼───────┤\n│  합계  │${String(totalBudget).padStart(7)}│${String(totalExec).padStart(7)}│${String(totalBudget - totalExec).padStart(7)}│\n└────────┴───────┴───────┴───────┘\n\n${qt.label} 부서는?`,
           choices, answer,
           explanation: data.map(d => `${d.dept}: 집행률 ${(d.exec/d.budget*100).toFixed(1)}%, 잔액 ${d.remain}`).join(', '),
           keywords: ['예산집행률', '자료해석', '대형표']
@@ -155,15 +418,8 @@ class QuestionGenerator {
     return ['intermediate', 'advanced'].map(level => ({
       area: '수리능력', areaCode: 'math', level,
       generator: () => {
-        const contexts = [
-          { item: '매출액', unit: '억원', org: 'A공사' },
-          { item: '민원처리 건수', unit: '건', org: 'B공단' },
-          { item: '이용자 수', unit: '명', org: 'C기관' },
-          { item: '수출액', unit: '백만달러', org: 'D공사' },
-          { item: '예산 집행액', unit: '억원', org: 'E기관' },
-          { item: '신규 고용 인원', unit: '명', org: 'F공단' },
-        ];
-        const ctx = contexts[this._rand(0, contexts.length - 1)];
+        const scn = this._orgScenario();
+        const ctx = { item: scn.item, unit: scn.unit, org: this._orgName() };
         const years = [this._rand(2021, 2023), 0, 0];
         years[1] = years[0] + 1; years[2] = years[1] + 1;
         const vals = [this._rand(100, 500) * 10, 0, 0];
@@ -204,13 +460,7 @@ class QuestionGenerator {
     return ['beginner', 'intermediate'].map(level => ({
       area: '수리능력', areaCode: 'math', level,
       generator: () => {
-        const catSets = [
-          ['인건비', '운영비', '사업비', '출장비', '교육비'],
-          ['급여', '복리후생비', '여비', '업무추진비', '시설비'],
-          ['국내출장비', '해외출장비', '교통비', '숙박비', '식비'],
-          ['정규직', '계약직', '파견직', '인턴', '용역']
-        ];
-        const categories = catSets[this._rand(0, catSets.length - 1)];
+        const categories = this._orgBudgetItems();
         const values = categories.map(() => this._rand(50, 400) * 10);
         const total = values.reduce((s, v) => s + v, 0);
         const proportions = values.map(v => (v / total * 100).toFixed(1));
@@ -227,7 +477,7 @@ class QuestionGenerator {
 
         return {
           area: '수리능력', subArea: '비중계산', level, type: 'PSAT형', timeLimit: 90,
-          question: `다음은 기관의 항목별 지출 내역이다. (단위: 만원)\n\n${categories.map((c, i) => `${c}: ${values[i]}`).join(', ')}\n합계: ${total}\n\n다음 중 옳은 것은?`,
+          question: `다음은 ${this._orgName()}의 항목별 지출 내역이다. (단위: 만원)\n\n${categories.map((c, i) => `${c}: ${values[i]}`).join(', ')}\n합계: ${total}\n\n다음 중 옳은 것은?`,
           choices, answer: choices.indexOf(correctChoice),
           explanation: categories.map((c, i) => `${c}: ${proportions[i]}%`).join(', '),
           keywords: ['비중', '백분율', '자료해석']
@@ -328,7 +578,8 @@ class QuestionGenerator {
             const approver = amount >= 5000000 ? '기관장' : amount >= 1000000 ? '부서장' : '팀장';
             const reportDays = this._rand(3, 10);
             const penalty = this._rand(10, 50);
-            const dept = ['총무과', '기획과', '사업과', '인사과'][this._rand(0, 3)];
+            const reg = this._orgRegulation();
+            const dept = reg.dept;
 
             const correct = `출장 ${days}일 전에 신청서를 제출하면 적법하다.`;
             const wrongs = [
@@ -558,7 +809,7 @@ class QuestionGenerator {
         const choices = [s.correct, ...s.wrongs]; this._shuffle(choices);
         return {
           area: '문제해결능력', subArea: '우선순위결정', level, type: 'PSAT형', timeLimit: 100,
-          question: `기관에서 '${s.situation}' 상황이 발생하였다. 고려 기준: ${s.criteria.join(', ')}.\n\n가장 적절한 대응 방안은?`,
+          question: `${this._orgName()}에서 '${s.situation}' 상황이 발생하였다. 고려 기준: ${s.criteria.join(', ')}.\n\n가장 적절한 대응 방안은?`,
           choices, answer: choices.indexOf(s.correct),
           explanation: `${s.criteria[0]}와 ${s.criteria[1]}을 우선 고려하는 것이 합리적.`,
           keywords: ['우선순위', '의사결정', '상황판단']
@@ -644,12 +895,8 @@ class QuestionGenerator {
       area: '자원관리능력', areaCode: 'res', level,
       generator: () => {
         const totalBudget = this._rand(5, 20) * 1000;
-        const itemSets = [
-          ['인건비', '시설비', '운영비', '사업비'],
-          ['급여', '교육훈련비', '시설유지비', '사업추진비'],
-          ['정규직인건비', '비정규직인건비', '업무추진비', '여비교통비']
-        ];
-        const items = itemSets[this._rand(0, itemSets.length - 1)];
+        const budgetItems = this._orgBudgetItems();
+        const items = budgetItems.length >= 4 ? budgetItems.slice(0, 4) : ['인건비', '시설비', '운영비', '사업비'];
         const ratios = [this._rand(30, 50), this._rand(15, 25), this._rand(10, 20), 0];
         ratios[3] = 100 - ratios[0] - ratios[1] - ratios[2];
         if (ratios[3] < 5) { ratios[2] -= 5; ratios[3] += 5; }
@@ -667,7 +914,7 @@ class QuestionGenerator {
 
         return {
           area: '자원관리능력', subArea: '예산배분', level, type: 'PSAT형', timeLimit: 90,
-          question: `기관 총 예산 ${totalBudget}만원의 배분 현황이다.\n\n${items.map((it, i) => `${it}: ${ratios[i]}% (${amounts[i]}만원)`).join('\n')}\n\n옳은 것은?`,
+          question: `${this._orgName()} 총 예산 ${totalBudget}만원의 배분 현황이다.\n\n${items.map((it, i) => `${it}: ${ratios[i]}% (${amounts[i]}만원)`).join('\n')}\n\n옳은 것은?`,
           choices, answer: choices.indexOf(correct),
           explanation: items.map((it, i) => `${it}: ${ratios[i]}%`).join(', '),
           keywords: ['예산배분', '비중분석', '자원관리']

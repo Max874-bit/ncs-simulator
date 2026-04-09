@@ -41,6 +41,20 @@ class Orchestrator {
   generateExam(options = {}) {
     this._emit('info', '═══ 시험 생성 파이프라인 시작 ═══');
 
+    // Step 0: 기관 프리셋이 있으면 영역비중/난이도/유형 분포 반영
+    if (options.company) {
+      try {
+        const presets = this.db.getCompanyPresets();
+        const preset = presets.find(p => p.company_name === options.company);
+        if (preset) {
+          this._emit('info', `기관 프리셋 적용: ${preset.company_name}`);
+          options.companyPreset = preset;
+        }
+      } catch (e) {
+        this._emit('warn', `프리셋 조회 실패: ${e.message}`);
+      }
+    }
+
     // Step 1: QuestionFetchAgent가 문제 수집
     this.questionAgent.clearLog();
     const examData = this.questionAgent.fetchFromLocalBank(options);

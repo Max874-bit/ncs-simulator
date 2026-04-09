@@ -75,8 +75,19 @@ class QuestionFetchAgent {
    * ═══ 핵심: 스마트 문제 수집 (중복 방지 + 동적 생성) ═══
    */
   fetchFromLocalBank(options = {}) {
-    const { level, questionCount = 20, areas } = options;
-    this._emit('info', `스마트 문제 수집 시작 (level=${level || '전체'}, count=${questionCount})`);
+    const { level, questionCount = 20, areas, companyPreset } = options;
+    this._emit('info', `스마트 문제 수집 시작 (level=${level || '전체'}, count=${questionCount}${companyPreset ? ', 기관=' + companyPreset.company_name : ''})`);
+
+    // 기관 컨텍스트 설정 → QuestionGenerator에 전달
+    if (companyPreset) {
+      this.generator.setContext({
+        companyName: companyPreset.company_name,
+        description: companyPreset.description
+      });
+      this._emit('info', `기관 컨텍스트 설정: ${companyPreset.company_name}`);
+    } else {
+      this.generator.setContext(null);
+    }
 
     // Step 1: 전체 풀 로드 (DB 우선)
     let pool;
@@ -110,14 +121,35 @@ class QuestionFetchAgent {
     const seenPool = pool.filter(q => recentIds.includes(q.id));
     this._emit('info', `미출제: ${unseenPool.length}, 기출: ${seenPool.length}`);
 
-    // Step 3: 영역별 균등 배분 (미출제 우선)
-    const availableAreas = [...new Set(pool.map(q => q.area))];
-    const perArea = Math.ceil(questionCount / availableAreas.length);
+    // Step 3: 영역별 배분 — 기관 프리셋 비중 or 균등
+    let areaQuota = {};
+    if (companyPreset && companyPreset.area_weights) {
+      // 기관별 영역 비중에 따라 문제 수 배분
+      const weights = companyPreset.area_weights;
+      const totalWeight = Object.values(weights).reduce((s, w) => s + w, 0);
+      let allocated = 0;
+      const entries = Object.entries(weights).sort((a, b) => b[1] - a[1]);
+      for (const [area, weight] of entries) {
+        const cnt = Math.round(questionCount * weight / totalWeight);
+        areaQuota[area] = cnt;
+        allocated += cnt;
+      }
+      // 반올림 오차 보정 (가장 비중 높은 영역에서 조정)
+      if (allocated !== questionCount && entries.length > 0) {
+        areaQuota[entries[0][0]] += (questionCount - allocated);
+      }
+      this._emit('info', `기관별 배분: ${Object.entries(areaQuota).map(([a, n]) => `${a}(${n})`).join(', ')}`);
+    } else {
+      // 균등 배분
+      const availableAreas = [...new Set(pool.map(q => q.area))];
+      const perArea = Math.ceil(questionCount / availableAreas.length);
+      availableAreas.forEach(a => { areaQuota[a] = perArea; });
+    }
 
     let selected = [];
-    let needGenerate = 0;
 
-    for (const area of availableAreas) {
+    for (const [area, quota] of Object.entries(areaQuota)) {
+      if (quota <= 0) continue;
       const unseenArea = unseenPool.filter(q => q.area === area);
       const seenArea = seenPool.filter(q => q.area === area);
 
@@ -125,25 +157,31 @@ class QuestionFetchAgent {
       this._shuffle(seenArea);
 
       // 미출제 먼저, 부족하면 기출에서 보충
-      const areaSelected = [
-        ...unseenArea.slice(0, perArea),
-        ...seenArea.slice(0, Math.max(0, perArea - unseenArea.length))
-      ].slice(0, perArea);
+      const fromBank = [
+        ...unseenArea.slice(0, quota),
+        ...seenArea.slice(0, Math.max(0, quota - unseenArea.length))
+      ].slice(0, quota);
 
-      selected.push(...areaSelected);
+      selected.push(...fromBank);
 
-      // 영역 문제가 부족하면 동적 생성 필요
-      if (areaSelected.length < perArea) {
-        needGenerate += perArea - areaSelected.length;
+      // 부족분 또는 기관 맥락 강화를 위해 동적 생성
+      const dynamicMin = companyPreset ? Math.max(1, Math.ceil(quota * 0.5)) : 0;
+      const dynamicNeeded = Math.max(dynamicMin - 0, quota - fromBank.length);
+
+      if (dynamicNeeded > 0) {
+        // 기관 프리셋이면 동적 문제로 일부 교체 (기관 맥락 반영)
+        const replace = Math.min(dynamicNeeded, fromBank.length);
+        if (companyPreset && replace > 0 && fromBank.length > dynamicNeeded) {
+          fromBank.splice(fromBank.length - replace, replace);
+          selected.splice(selected.length - replace, replace);
+        }
+        const deficit = quota - (selected.filter(q => q.area === area).length || 0);
+        if (deficit > 0) {
+          this._emit('info', `${area} → ${deficit}문제 동적 생성 (기관 맥락 반영)`);
+          const generated = this.generator.generate(deficit, { areas: [area], level });
+          selected.push(...generated);
+        }
       }
-    }
-
-    // Step 4: 부족분은 QuestionGenerator로 동적 생성
-    if (selected.length < questionCount) {
-      const deficit = questionCount - selected.length;
-      this._emit('info', `정적 은행 부족 → ${deficit}문제 동적 생성`);
-      const generated = this.generator.generate(deficit, { areas, level });
-      selected.push(...generated);
     }
 
     // Step 5: 최종 셔플 & 트림

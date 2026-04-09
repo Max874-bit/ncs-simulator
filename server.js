@@ -21,8 +21,8 @@ const orchestrator = new Orchestrator();
  */
 app.post('/api/exam/generate', (req, res) => {
   try {
-    const { level, questionCount = 20 } = req.body;
-    const result = orchestrator.generateExam({ level, questionCount });
+    const { level, questionCount = 20, company } = req.body;
+    const result = orchestrator.generateExam({ level, questionCount, company });
 
     if (!result.questions || result.questions.length === 0) {
       return res.status(400).json({ error: '조건에 맞는 문제가 없습니다. 난이도나 문제 수를 조정해 주세요.' });
